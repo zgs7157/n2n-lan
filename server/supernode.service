@@ -1,0 +1,15 @@
+# n2n supernode systemd 单元文件（手动使用示例）
+# 放置到 /etc/systemd/system/n2n-supernode.service 后执行:
+#   systemctl daemon-reload && systemctl enable --now n2n-supernode
+[Unit]
+Description=n2n supernode
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/supernode -p 7654 -f
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

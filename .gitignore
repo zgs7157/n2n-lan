@@ -1,0 +1,20 @@
+# 本机配置（含房间密钥与密码，切勿提交）
+client/config.json
+
+# 运行日志
+client/logs/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 打包产物（使用 GitHub Releases 分发）
+client/n2n_room_manager.exe
+
+# 原始下载包与解压残留（冗余，不提交）
+*.zip
+/bin/
+/n2n-lan-client/
+
+# 许可不明的第三方工具（EasyN2N 提取，请按 README 自行获取）
+client/tools/WinIPBroadcast.exe
