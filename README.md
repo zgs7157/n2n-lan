@@ -79,16 +79,27 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 多人游戏 → 添加服务器 → `你的公网IP:25565`（需房主路由器已转发 TCP 25565）。
 
 **方式 B（加入 n2n 房间，体验与 Windows 客户端一致）**：使用 `client/join_room_linux.sh`：
-1. 安装 n2n **v3** 的 edge：从 lucktu 下载 Linux x64 版并放入 PATH（`https://github.com/lucktu/n2n`）；
-2. 执行（带密码房 / 免密房）：
+1. 安装 n2n **v3** 的 edge（**必须 v3**，与服务器协议一致；发行版 apt 源多为 2.x 老版本，不兼容）。
+   推荐直接下载 lucktu 预编译 Linux 版（x64）：
    ```bash
+   # 国内加速（gitee 镜像，推荐）：https://gitee.com/lucktu/n2nb
+   # GitHub 直连或 ghproxy 镜像：
+   wget https://github.com/lucktu/n2n/raw/master/Linux/n2n_v3_linux_x64_v3.1.1_r1255_static_by_heiye.tar.gz
+   tar -xzf n2n_v3_linux_x64_v3.1.1_r1255_static_by_heiye.tar.gz
+   sudo cp edge /usr/local/bin/ && edge --version   # 确认版本
+   ```
+   （ARM 机器选 `n2n_v3_linux_arm64(aarch64)_v3.1.1_r1255_static_by_heiye.tar.gz`）
+2. 下载脚本并执行（带密码房 / 免密房）：
+   ```bash
+   wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
    sudo bash join_room_linux.sh '房间码' 482913 39.162.81.68:7654
    sudo bash join_room_linux.sh '房间码' 39.162.81.68:7654
    ```
+   （raw.githubusercontent 直连不通时，给 wget 加 ghproxy 前缀：
+   `https://ghproxy.net/https://raw.githubusercontent.com/...`）
 3. MC 多人游戏 → 直接连接 → 填 `10.x.0.1:25565`。
 
-> 注意：n2n 客户端必须为 **v3**（与服务器协议一致，发行版 apt 源多为 2.x 老版本，不兼容）。
-> 脚本会创建虚拟网卡 `n2n0`，需要 root；退出房间按脚本结尾提示清理。
+> 注意：n2n 客户端必须为 **v3**（与服务器协议一致）。脚本会创建虚拟网卡 `n2n0`，需要 root；退出房间按脚本结尾提示清理。
 
 ---
 
