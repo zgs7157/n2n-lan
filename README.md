@@ -73,6 +73,23 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
   （`sha256(密钥:密码)` 前 16 位），因此**密码错误 = 密钥不同 = 无法解密对端流量 = 进不来**，
   即使房间码泄露也无效。免密房间则直接用房间码自带密钥。
 
+### Linux 客户端（朋友用 Linux 时）
+
+**方式 A（最简单，无需 n2n）**：Linux 上的 MC Java 版直接连房主公网：
+多人游戏 → 添加服务器 → `你的公网IP:25565`（需房主路由器已转发 TCP 25565）。
+
+**方式 B（加入 n2n 房间，体验与 Windows 客户端一致）**：使用 `client/join_room_linux.sh`：
+1. 安装 n2n **v3** 的 edge：从 lucktu 下载 Linux x64 版并放入 PATH（`https://github.com/lucktu/n2n`）；
+2. 执行（带密码房 / 免密房）：
+   ```bash
+   sudo bash join_room_linux.sh '房间码' 482913 39.162.81.68:7654
+   sudo bash join_room_linux.sh '房间码' 39.162.81.68:7654
+   ```
+3. MC 多人游戏 → 直接连接 → 填 `10.x.0.1:25565`。
+
+> 注意：n2n 客户端必须为 **v3**（与服务器协议一致，发行版 apt 源多为 2.x 老版本，不兼容）。
+> 脚本会创建虚拟网卡 `n2n0`，需要 root；退出房间按脚本结尾提示清理。
+
 ---
 
 ## 三、MC 联机要点
