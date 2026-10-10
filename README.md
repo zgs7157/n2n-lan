@@ -177,6 +177,37 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 
 ---
 
+## 八、官网访问统计后台（可选）
+
+官网（GitHub Pages 发布）默认打点到**你自己的服务器**上的统计服务，访问数据不进任何第三方，带密码后台页可看今日/累计访问与独立访客。
+
+### 1. 部署统计服务（服务器上）
+
+把 `server/visit_stats.exe` 和 `server/start_stats.bat` 放到服务器同一目录，双击 `start_stats.bat` 即后台运行（Windows；Linux 服务器用 `python3 visit_stats.py`）。首次运行自动生成 `stats_config.json`，可修改 `admin_key`（后台密码）与 `port`（默认 8088），改后重启服务生效。
+
+### 2. 防火墙与端口转发
+
+- Windows 防火墙放行 TCP 8088 入站；
+- 路由器把 TCP 8088 转发到服务器内网 IP（如 192.168.1.4）。
+
+### 3. 后台地址
+
+```
+http://你的公网IP:8088/admin?key=你的后台密码
+```
+
+页面显示：今日 PV/UV、累计 PV/UV、最近 7 天、最近 30 条访问记录（时间/IP/页面/UA）。
+
+### 4. 官网打点
+
+官网已内置打点脚本与 Footer 访客徽章（`docs/index.html`），指向 `http://39.162.81.68:8088`。**公网 IP 变化时**，需同时修改官网中两处 `39.162.81.68:8088`（打点脚本 + Footer 徽章），推送后 Pages 自动重新部署。
+
+### 5. 关闭统计
+
+任务管理器结束 `visit_stats.exe`；彻底移除则删除 `visits.db`（统计数据）与 `stats_config.json`（配置）。
+
+---
+
 ## 目录结构
 
 ```
@@ -189,7 +220,9 @@ n2n-lan/
 │   ├── deploy_supernode_docker.sh
 │   ├── start_supernode.bat      #   Windows 服务器启动
 │   ├── supernode.exe
-│   └── supernode.service        #   systemd 模板
+│   ├── supernode.service        #   systemd 模板
+│   ├── visit_stats.py           #   官网访问统计服务源码（可选；或使用打包的 visit_stats.exe）
+│   └── start_stats.bat          #   Windows 访问统计启动（可选）
 └── client/                      # Windows 客户端（整目录拷贝分发）
     ├── start.bat                #   双击启动
     ├── n2n_room_manager.py      #   房间管理小工具

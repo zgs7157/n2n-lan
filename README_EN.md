@@ -198,6 +198,37 @@ n2n cannot run rootless on Android/iOS, so phone friends should connect straight
 
 ---
 
+## 7. Website Visit Stats Dashboard (optional)
+
+The website (served by GitHub Pages) reports visits to a tiny stats service running on **your own server** — no third party involved. A password-protected admin page shows today's / total page views and unique visitors.
+
+### 1. Deploy the stats service (on your server)
+
+Put `server/visit_stats.exe` and `server/start_stats.bat` in the same folder and double-click `start_stats.bat` (Windows; on Linux run `python3 visit_stats.py`). First run creates `stats_config.json` — edit `admin_key` (admin password) and `port` (default 8088), then restart the service.
+
+### 2. Firewall & port forwarding
+
+- Allow inbound TCP 8088 in Windows Firewall.
+- Forward TCP 8088 on your router to the server's LAN IP (e.g. 192.168.1.4).
+
+### 3. Admin page
+
+```
+http://YOUR_PUBLIC_IP:8088/admin?key=YOUR_ADMIN_KEY
+```
+
+Shows: today PV/UV, total PV/UV, last 7 days, latest 30 visits (time / IP / page / UA).
+
+### 4. Website tracking
+
+The website already contains the tracking script and the Footer visitor badge (`docs/index.html`), both pointing to `http://39.162.81.68:8088`. **If your public IP changes**, update those two occurrences of `39.162.81.68:8088` in the site, then push (Pages redeploys automatically).
+
+### 5. Stop / remove
+
+End the `visit_stats.exe` process in Task Manager; to remove completely, delete `visits.db` (data) and `stats_config.json` (config).
+
+---
+
 ## Directory Structure
 
 ```
@@ -210,7 +241,9 @@ n2n-lan/
 │   ├── deploy_supernode_docker.sh
 │   ├── start_supernode.bat      #   Windows server launcher
 │   ├── supernode.exe
-│   └── supernode.service        #   systemd template
+│   ├── supernode.service        #   systemd template
+│   ├── visit_stats.py           #   website visit stats source (optional; or use visit_stats.exe)
+│   └── start_stats.bat          #   Windows stats launcher (optional)
 └── client/                      # Windows client (copy the whole folder for distribution)
     ├── start.bat                #   double-click to launch
     ├── n2n_room_manager.py      #   Room Manager (bilingual UI)

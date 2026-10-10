@@ -421,6 +421,7 @@
 <footer>
   <div class="wrap foot">
     <div class="license" data-i18n="foot-license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
+    <img src="http://39.162.81.68:8088/badge.svg" alt="访问量" style="height:20px;vertical-align:middle">
     <div class="links">
       <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="foot-gh">GitHub</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot-doc">文档</a>
@@ -431,6 +432,12 @@
 
 <script>
 (function(){
+  // 访问统计打点（自建服务，图片方式兼容 HTTPS→HTTP；公网 IP 变化需同步更新此处与 footer 徽章）
+  try {
+    var _st = new Image();
+    _st.src = "http://39.162.81.68:8088/hit?page=home&r=" + Date.now();
+  } catch(e){}
+
   var I18N = {
     zh: {
       "doc-title":"n2n 房间式虚拟局域网 — MC 异地联机工具",

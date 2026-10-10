@@ -22,3 +22,8 @@ client/tools/WinIPBroadcast.exe
 # 官网：自检截图与本地部署目录不入仓库（发布源为 docs/）
 website/_shots/
 website/dist/
+
+# 访问统计服务：运行数据与本机配置（含后台密码，勿提交）
+server/visits.db
+server/stats_config.json
+server/visit_stats.exe
