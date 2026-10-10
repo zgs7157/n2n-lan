@@ -166,6 +166,14 @@ Use a community-maintained public n2n supernode (e.g. Bugxia/EasyN2N nodes bj/cd
 - Room isolation is still guaranteed by `room code = community@subnet#key`;
 - Cost: traffic does not pass through your own server; relies on the node's uptime/latency.
 
+### Option 3: Mobile friends join directly (no install; recommended for phones)
+n2n cannot run rootless on Android/iOS, so phone friends should connect straight to your MC server:
+1. In the desktop tool click **Copy Join Link** and send the link to your friend (it already carries your public IP and room name, e.g. `https://zgs7157.github.io/n2n-lan/join.html?ip=39.162.81.68&port=25565&room=...`).
+2. Your friend opens the link on their phone, sees the server address and taps **Copy Server Address**.
+3. Open FCL → Multiplayer → Add Server / Direct Connect → paste the address → Join Server.
+- Prerequisite: the router must also forward **TCP 25565 → 192.168.1.4** (a different port from n2n's UDP 7654 — forward both);
+- The friend's phone needs no extra software and no root; FCL is the launcher itself.
+
 ---
 
 ## 6. Troubleshooting
