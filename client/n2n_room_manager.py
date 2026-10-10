@@ -20,6 +20,7 @@ import os
 import random
 import re
 import secrets
+import socket
 import string
 import subprocess
 import sys
@@ -49,6 +50,10 @@ LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 DEFAULT_MTU = 1290
 
+# 房间聊天：走虚拟局域网 UDP 广播（房间内所有成员同一网段，广播即房间内消息）
+CHAT_PORT = 23333
+CHAT_PROTO_VERSION = 1
+
 DEFAULT_CONFIG = {
     "supernode": "",          # 例如 "1.2.3.4:7654"，多个用逗号分隔
     "mtu": DEFAULT_MTU,
@@ -56,6 +61,7 @@ DEFAULT_CONFIG = {
     "use_game_metric": True,  # edge -x 1：更利于联机游戏识别
     "auto_broadcast": False,  # 是否随房间自动启动 WinIPBroadcast（广播助手）
     "lang": "",               # 界面语言：zh/en，空 = 按系统语言自动
+    "username": "",           # 房间聊天显示名
     "rooms": {},              # community -> {"subnet": "...", "key": "...", "my_ip": "...", "last_host": 2}
 }
 
@@ -98,6 +104,16 @@ LANG_ZH = {
     "opt_multicast": "接受组播(-E, 局域网发现)",
     "opt_metric": "游戏识别(-x 1)",
     "opt_bcast": "自动启动广播助手",
+    # 房间聊天
+    "chat": "房间聊天",
+    "chat_title": "房间聊天 · %(room)s",
+    "chat_name": "显示名",
+    "chat_name_hint": "进房聊天时显示给别人的名字，保存在本机",
+    "chat_need_room": "请先创建或加入房间，再打开聊天",
+    "chat_saved": ">> 显示名已保存: %(name)s",
+    "chat_placeholder": "说点什么…（Enter 发送）",
+    "chat_send": "发送",
+    "chat_no_msg": "还没有消息。房间里的人进聊天窗口后，消息会显示在这里（UDP 广播，同房间互通）。",
     # 消息
     "info": "提示",
     "error": "错误",
@@ -174,6 +190,16 @@ LANG_EN = {
     "opt_multicast": "Multicast (-E, LAN discovery)",
     "opt_metric": "Game mode (-x 1)",
     "opt_bcast": "Auto-start broadcast helper",
+    # Room chat
+    "chat": "Room Chat",
+    "chat_title": "Room Chat · %(room)s",
+    "chat_name": "Display name",
+    "chat_name_hint": "Shown to others in room chat; saved locally",
+    "chat_need_room": "Create or join a room before chatting",
+    "chat_saved": ">> Display name saved: %(name)s",
+    "chat_placeholder": "Type a message... (Enter to send)",
+    "chat_send": "Send",
+    "chat_no_msg": "No messages yet. When others in the room open the chat window, messages show up here (UDP broadcast within the room).",
     # Messages
     "info": "Info",
     "error": "Error",
@@ -373,6 +399,14 @@ def make_join_link(host, port=25565, room="开黑房"):
     )
 
 
+def chat_broadcast_addr(virtual_ip):
+    """由虚拟 IP 计算房间聊天广播地址：10.x.0.h -> 10.x.0.255"""
+    parts = (virtual_ip or "").split(".")
+    if len(parts) == 4 and parts[0] == "10":
+        return "%s.%s.%s.255" % (parts[0], parts[1], parts[2])
+    return ""
+
+
 # ----------------------------------------------------------------------------
 # 系统工具：驱动 / 防火墙 / 提权
 # ----------------------------------------------------------------------------
@@ -497,6 +531,61 @@ class LogTailer(threading.Thread):
             pass
 
 
+class ChatListener(threading.Thread):
+    """房间聊天监听：常驻监听 UDP 广播端口；进房后只显示当前房间(community)的消息。
+
+    原理：同一 n2n 房间 = 同一虚拟局域网（10.x.0.0/24），成员在虚拟网卡上向
+    10.x.0.255:23333 发 UDP 广播，房间内所有开着本工具的成员都能收到。
+    不需要额外服务器，消息不经过 supernode 以外的地方。
+    """
+
+    def __init__(self, on_msg):
+        super().__init__(daemon=True)
+        self._on_msg = on_msg
+        self._stop = threading.Event()
+        self._sock = None
+        self._room = None  # 当前所在房间的 community；None = 未进房，不显示
+
+    def set_room(self, community):
+        self._room = community
+
+    def clear_room(self):
+        self._room = None
+
+    def stop(self):
+        self._stop.set()
+        if self._sock is not None:
+            try:
+                self._sock.close()
+            except Exception:
+                pass
+
+    def run(self):
+        try:
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._sock.bind(("", CHAT_PORT))
+            self._sock.settimeout(0.4)
+        except Exception:
+            return
+        while not self._stop.is_set():
+            try:
+                data, _addr = self._sock.recvfrom(4096)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            try:
+                obj = json.loads(data.decode("utf-8", "replace"))
+            except Exception:
+                continue
+            if obj.get("v") != CHAT_PROTO_VERSION:
+                continue
+            if not self._room or obj.get("c") != self._room:
+                continue
+            self._on_msg(obj.get("u", "?"), obj.get("m", ""))
+
+
 class EdgeSession:
     """一个 edge 会话：启动 / 停止 / 状态。"""
 
@@ -578,6 +667,10 @@ class App:
         self.session = EdgeSession(self)
         self._connected = None
         self._log_lines = []
+        self.chat_win = None
+        self._chat_cache = []
+        self.chat_listener = ChatListener(self.on_chat_msg)
+        self.chat_listener.start()
 
         # 界面语言：配置优先，否则按系统语言
         global _lang
@@ -624,6 +717,8 @@ class App:
         self.btn_copy.pack(side="left", padx=2)
         self.btn_link = ttk.Button(row1, text=tr("copy_link"), command=self.copy_join_link)
         self.btn_link.pack(side="left", padx=2)
+        self.btn_chat = ttk.Button(row1, text=tr("chat"), command=self.open_chat)
+        self.btn_chat.pack(side="left", padx=2)
 
         row2 = ttk.Frame(f_room)
         row2.pack(fill="x", padx=6, pady=2)
@@ -812,7 +907,8 @@ class App:
         self.append_log(tr("log_supernode", sn=", ".join(sn_list)))
         pid = self.session.start(community, key, ip, sn_list)
         self.append_log(tr("log_edge_pid", pid=pid))
-        self._connected = {"community": community, "code": code}
+        self._connected = {"community": community, "code": code, "ip": ip}
+        self.chat_listener.set_room(community)
         self.btn_create.config(state="disabled")
         self.btn_join.config(state="disabled")
         self.btn_leave.config(state="normal")
@@ -822,6 +918,9 @@ class App:
     def leave_room(self):
         self.session.stop()
         self._connected = None
+        self.chat_listener.clear_room()
+        if self.chat_win is not None:
+            self._close_chat()
         self.btn_create.config(state="normal")
         self.btn_join.config(state="normal")
         self.btn_leave.config(state="disabled")
@@ -858,6 +957,121 @@ class App:
         self.root.clipboard_clear()
         self.root.clipboard_append(link)
         self.append_log(tr("log_copy_link"))
+
+    # ---------------- 房间聊天 ----------------
+    def current_username(self):
+        """取显示名；空则生成默认名并保存。"""
+        name = self.var_username.get().strip()
+        if not name:
+            prefix = "玩家" if _lang == "zh" else "Player"
+            name = "%s%d" % (prefix, random.randint(1000, 9999))
+            self.var_username.set(name)
+        self.cfg["username"] = name
+        save_config(self.cfg)
+        return name
+
+    def open_chat(self):
+        if not self._connected:
+            messagebox.showinfo(tr("info"), tr("chat_need_room"))
+            return
+        if self.chat_win is not None and self.chat_win.winfo_exists():
+            self.chat_win.lift()
+            return
+
+        win = tk.Toplevel(self.root)
+        self.chat_win = win
+        win.title(tr("chat_title", room=self._connected["community"]))
+        win.geometry("520x420")
+        win.minsize(420, 320)
+
+        top = ttk.Frame(win)
+        top.pack(fill="x", padx=10, pady=8)
+        ttk.Label(top, text=tr("chat_name")).pack(side="left")
+        self.var_username = tk.StringVar(value=self.cfg.get("username", ""))
+        ttk.Entry(top, textvariable=self.var_username, width=20).pack(side="left", padx=6)
+        ttk.Button(top, text=tr("save"), command=self.save_chat_name).pack(side="left", padx=4)
+        ttk.Label(top, text=tr("chat_name_hint"), foreground="#666").pack(side="left", padx=6)
+
+        self.txt_chat = scrolledtext.ScrolledText(win, height=14, state="disabled", font=("Microsoft YaHei UI", 10))
+        self.txt_chat.pack(fill="both", expand=True, padx=10, pady=4)
+
+        bottom = ttk.Frame(win)
+        bottom.pack(fill="x", padx=10, pady=8)
+        self.var_chat_msg = tk.StringVar()
+        entry = ttk.Entry(bottom, textvariable=self.var_chat_msg)
+        entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        entry.bind("<Return>", self.send_chat)
+        ttk.Button(bottom, text=tr("chat_send"), command=self.send_chat).pack(side="left")
+
+        # 回填已收到的消息缓存
+        for line in self._chat_cache:
+            self._chat_append_line(line)
+        if not self._chat_cache:
+            self._chat_append_line(tr("chat_no_msg"))
+
+        win.protocol("WM_DELETE_WINDOW", self._close_chat)
+
+    def _close_chat(self):
+        if self.chat_win is not None:
+            self.chat_win.destroy()
+        self.chat_win = None
+
+    def _chat_append_line(self, line):
+        if self.txt_chat is not None:
+            self.txt_chat.config(state="normal")
+            self.txt_chat.insert("end", line + "\n")
+            self.txt_chat.see("end")
+            self.txt_chat.config(state="disabled")
+
+    def on_chat_msg(self, user, msg):
+        """监听线程回调：缓存 + 若聊天窗口开着则实时显示。"""
+        line = "[%s] %s: %s" % (time.strftime("%H:%M"), user, msg)
+        self._chat_cache.append(line)
+        if len(self._chat_cache) > 200:
+            self._chat_cache = self._chat_cache[-200:]
+        if self.chat_win is not None and self.chat_win.winfo_exists():
+            try:
+                self.root.after(0, lambda: self._chat_append_line(line))
+            except Exception:
+                pass
+
+    def save_chat_name(self):
+        name = self.var_username.get().strip()
+        if not name:
+            name = self.current_username()
+        self.cfg["username"] = name
+        save_config(self.cfg)
+        self.append_log(tr("chat_saved", name=name))
+
+    def send_chat(self, _event=None):
+        if not self._connected:
+            messagebox.showinfo(tr("info"), tr("chat_need_room"))
+            return
+        msg = self.var_chat_msg.get().strip()
+        if not msg:
+            return
+        ip = self._connected.get("ip", "")
+        bcast = chat_broadcast_addr(ip)
+        if not bcast:
+            messagebox.showinfo(tr("info"), tr("chat_need_room"))
+            return
+        name = self.current_username()
+        payload = json.dumps({
+            "v": CHAT_PROTO_VERSION,
+            "c": self._connected["community"],
+            "u": name,
+            "m": msg,
+        }).encode("utf-8")
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            s.sendto(payload, (bcast, CHAT_PORT))
+            s.close()
+        except Exception:
+            pass
+        self.var_chat_msg.set("")
+        # 自己立即显示（广播可能不回环）
+        self.on_chat_msg(name, msg)
 
     # ---------------- 工具按钮 ----------------
     def cmd_install_driver(self):
@@ -933,6 +1147,7 @@ def selftest():
     print("IP 建议(10.88.0):", suggest_ip("10.88.0", DEFAULT_CONFIG))
     print("IP 校验 10.9.0.3:", validate_ip("10.9.0.3"), "| 10.9.1.3:", validate_ip("10.9.1.3"))
     print("手机进房链接:", make_join_link("39.162.81.68", 25565, "mc-pixel-creeper-1234"))
+    print("聊天广播地址(10.88.0.2):", chat_broadcast_addr("10.88.0.2"), "| 非法:", chat_broadcast_addr("192.168.1.4"))
     print("== 自检完成 ==")
 
 

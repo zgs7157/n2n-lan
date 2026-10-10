@@ -117,6 +117,15 @@ use `client/join_room_linux.sh`:
 
 > The script creates a virtual NIC `n2n0` and needs root; clean up as printed on exit.
 
+### Room chat (desktop, built into the Windows client)
+
+After creating/joining a room click **Room Chat** — **no extra server needed**:
+
+- Display name: set it at the top of the chat window; saved locally (config.json), loaded next time;
+- Send: type at the bottom and press Enter (or click Send); everyone in the room who has the chat window open will receive it;
+- How it works: messages are sent as **UDP broadcast** on the virtual LAN (`10.x.0.255:23333`) with a community check in the payload, so messages from other rooms are ignored;
+- Stability: most reliable over direct P2P; broadcast can occasionally be dropped when relayed through the server — in-game play is unaffected.
+
 ---
 
 ## 3. Minecraft Notes
