@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>加入房间 — n2n 手机直连</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F1317'/%3E%3Ccircle cx='10' cy='16' r='4' fill='%2363C74D'/%3E%3Ccircle cx='22' cy='16' r='4' fill='%23D9A03F'/%3E%3Cpath d='M14 16h4' stroke='%23E8E6E1' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    --bg:#0F1317; --surface:#161C22; --border:#28313C;
+    --text:#E8E6E1; --muted:#9AA3AD; --accent:#63C74D; --amber:#D9A03F;
+    --radius:12px;
+    --font-main:"Noto Sans SC",system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:var(--font-main); font-size:16px; line-height:1.7;
+    min-height:100vh; display:flex; flex-direction:column;
+  }
+  .wrap{width:100%; max-width:560px; margin:0 auto; padding:28px 20px 40px}
+
+  /* 顶部 */
+  .top{display:flex; align-items:center; gap:10px; margin-bottom:26px}
+  .top svg{flex:none}
+  .top b{font-size:17px}
+
+  /* 卡片 */
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px 20px}
+  .room-name{font-size:20px; font-weight:900; margin-bottom:4px}
+  .room-sub{font-size:13px; color:var(--muted); margin-bottom:18px}
+  .addr{
+    font-family:var(--font-mono); font-size:19px; font-weight:600; color:var(--amber);
+    background:#1B222B; border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; margin-bottom:16px; word-break:break-all; user-select:all;
+  }
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:16px; border-radius:10px; font-size:16.5px; font-weight:700;
+    border:1px solid transparent; cursor:pointer; font-family:var(--font-main); min-height:52px;
+  }
+  .btn.primary{background:var(--accent); color:#0C150B}
+  .btn.primary:active{background:#74D95E}
+  .btn.ghost{background:transparent; color:var(--text); border-color:var(--border); margin-top:12px}
+  .btn.ghost:active{border-color:var(--accent)}
+  .btn:disabled{opacity:.5; cursor:default}
+
+  /* 步骤 */
+  .steps{margin-top:22px}
+  .steps h3{font-size:14px; color:var(--muted); margin-bottom:12px; font-weight:600}
+  .step{display:flex; gap:12px; padding:9px 0; align-items:flex-start}
+  .step .n{
+    flex:none; width:26px; height:26px; border-radius:7px; background:var(--accent); color:#0C150B;
+    font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; margin-top:2px;
+  }
+  .step p{font-size:14.5px; color:var(--text)}
+  .step p small{color:var(--muted); display:block; font-size:13px}
+
+  /* 输入模式 */
+  .input-mode{margin-top:26px}
+  .input-mode label{font-size:14px; color:var(--muted); display:block; margin-bottom:8px}
+  .input-mode input{
+    width:100%; padding:14px 16px; border-radius:10px; border:1px solid var(--border);
+    background:#1B222B; color:var(--text); font-family:var(--font-mono); font-size:16px;
+    outline:none; margin-bottom:16px;
+  }
+  .input-mode input:focus{border-color:var(--accent)}
+
+  /* 二维码 */
+  .qr-zone{margin-top:22px; text-align:center; display:none}
+  .qr-zone canvas,.qr-zone img{width:200px; height:200px; background:#fff; padding:10px; border-radius:10px}
+  .qr-zone p{font-size:13px; color:var(--muted); margin-top:10px}
+
+  /* toast */
+  #toast{
+    position:fixed; left:50%; bottom:36px; transform:translateX(-50%) translateY(20px);
+    background:#2A3A2A; color:var(--accent); border:1px solid rgba(99,199,77,.4);
+    padding:12px 22px; border-radius:10px; font-size:14.5px; font-weight:600;
+    opacity:0; pointer-events:none; transition:.25s; z-index:99;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .foot{text-align:center; font-size:12.5px; color:var(--muted); margin-top:26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <svg width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1B222B"/><circle cx="10" cy="16" r="4" fill="#63C74D"/><circle cx="22" cy="16" r="4" fill="#D9A03F"/><path d="M14 16h4" stroke="#E8E6E1" stroke-width="2"/></svg>
+    <b>加入房间</b>
+  </div>
+
+  <!-- 房间卡片 -->
+  <div class="card" id="roomCard">
+    <div class="room-name" id="roomName">开黑房</div>
+    <div class="room-sub" id="roomSub">手机直连 · 无需安装任何软件</div>
+    <div class="addr" id="addr">—</div>
+    <button class="btn primary" id="copyBtn">复制服务器地址</button>
+    <button class="btn ghost" id="qrBtn">生成二维码发给朋友</button>
+    <div class="steps">
+      <h3>在手机上进房间（FCL）</h3>
+      <div class="step"><span class="n">1</span><p>打开 FCL，进入游戏后点 <b>多人游戏</b></p></div>
+      <div class="step"><span class="n">2</span><p>点 <b>添加服务器 / 直接连接</b><small>名称随意填</small></p></div>
+      <div class="step"><span class="n">3</span><p>粘贴上面的地址，点 <b>完成 → 加入服务器</b><small>如果默认端口不是 25565，地址里的端口会自动带上</small></p></div>
+    </div>
+  </div>
+
+  <!-- 二维码 -->
+  <div class="qr-zone" id="qrZone">
+    <div id="qrBox"></div>
+    <p>长按或截图这张二维码，发给朋友扫码即可打开本页</p>
+  </div>
+
+  <!-- 无参数时：输入地址 -->
+  <div class="input-mode" id="inputMode">
+    <label>房主填一次，生成进房链接 / 二维码发给朋友</label>
+    <input id="ipInput" type="text" inputmode="url" placeholder="服务器地址，如 39.162.81.68:25565" autocomplete="off">
+    <button class="btn primary" id="genBtn">生成进房卡片</button>
+  </div>
+
+  <div class="foot">n2n 房间式虚拟局域网 · 手机版</div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  function qs(name){
+    var m = new URLSearchParams(location.search);
+    return m.get(name);
+  }
+  var ip = qs('ip');
+  var port = qs('port') || '25565';
+  var room = qs('room') || '开黑房';
+
+  var addrEl = document.getElementById('addr');
+  var roomName = document.getElementById('roomName');
+  var roomSub = document.getElementById('roomSub');
+  var copyBtn = document.getElementById('copyBtn');
+  var qrBtn = document.getElementById('qrBtn');
+  var qrZone = document.getElementById('qrZone');
+  var qrBox = document.getElementById('qrBox');
+  var inputMode = document.getElementById('inputMode');
+  var ipInput = document.getElementById('ipInput');
+  var genBtn = document.getElementById('genBtn');
+  var toast = document.getElementById('toast');
+
+  var server = '';
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function(){ toast.classList.remove('show'); }, 1800);
+  }
+
+  function renderCard(){
+    server = (port && port !== '25565') ? (ip + ':' + port) : ip;
+    addrEl.textContent = server;
+    roomName.textContent = room;
+    roomSub.textContent = '手机直连 · 无需安装任何软件';
+  }
+
+  function build(){
+    var pageUrl = location.origin + location.pathname + '?ip=' + encodeURIComponent(ip) +
+                  '&port=' + encodeURIComponent(port) + '&room=' + encodeURIComponent(room);
+    try { history.replaceState(null, '', pageUrl); } catch(e){}
+    renderCard();
+    inputMode.style.display = 'none';
+    return pageUrl;
+  }
+
+  if (ip) {
+    build();
+  } else {
+    copyBtn.disabled = true;
+    qrBtn.style.display = 'none';
+    genBtn.addEventListener('click', function(){
+      var raw = ipInput.value.trim();
+      if (!raw) { showToast('请先填写服务器地址'); return; }
+      var m = raw.match(/^([^:]+)(?::(\d+))?$/);
+      if (!m) { showToast('地址格式应为 IP:端口，如 39.162.81.68:25565'); return; }
+      ip = m[1];
+      port = m[2] || '25565';
+      build();
+      copyBtn.disabled = false;
+      qrBtn.style.display = '';
+    });
+  }
+
+  copyBtn.addEventListener('click', function(){
+    if (!server) return;
+    var done = function(){ showToast('地址已复制，去 FCL 粘贴即可'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(server).then(done, function(){
+        fallbackCopy(server); done();
+      });
+    } else {
+      fallbackCopy(server); done();
+    }
+  });
+
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  qrBtn.addEventListener('click', function(){
+    if (qrZone.style.display === 'block') {
+      qrZone.style.display = 'none';
+      return;
+    }
+    var target = location.origin + location.pathname + '?ip=' + encodeURIComponent(ip) +
+                 '&port=' + encodeURIComponent(port) + '&room=' + encodeURIComponent(room);
+    qrBox.innerHTML = '';
+    if (window.QRCode) {
+      try {
+        new QRCode(qrBox, { text: target, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+        qrZone.style.display = 'block';
+      } catch(e){ showToast('二维码生成失败，直接复制链接发给朋友'); }
+    } else {
+      showToast('二维码组件加载失败，直接复制链接发给朋友');
+    }
+  });
+})();
+</script>
+</body>
+</html>
