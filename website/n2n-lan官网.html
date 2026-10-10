@@ -43,6 +43,12 @@
     padding:6px 14px; border-radius:8px; font-size:14px;
   }
   .nav-links .gh:hover{text-decoration:none; border-color:var(--accent)}
+  .lang-btn{
+    background:transparent; color:var(--accent); border:1px solid rgba(99,199,77,.4);
+    padding:6px 14px; border-radius:8px; font-size:14px; cursor:pointer;
+    font-family:var(--font-main); font-weight:500;
+  }
+  .lang-btn:hover{border-color:var(--accent); background:rgba(99,199,77,.08)}
   .burger{display:none; background:none; border:0; cursor:pointer; padding:6px}
   .burger span{display:block; width:22px; height:2px; background:var(--text); margin:5px 0; border-radius:2px}
 
@@ -181,15 +187,16 @@
   <div class="wrap nav-inner">
     <div class="logo">
       <svg width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1B222B"/><circle cx="10" cy="16" r="4" fill="#63C74D"/><circle cx="22" cy="16" r="4" fill="#D9A03F"/><path d="M14 16h4" stroke="#E8E6E1" stroke-width="2"/></svg>
-      n2n 房间 LAN
+      <span data-i18n="logo">n2n 房间 LAN</span>
     </div>
     <div class="nav-links" id="navLinks">
-      <a href="#features">特性</a>
-      <a href="#how">工作原理</a>
-      <a href="#start">快速开始</a>
-      <a href="#download">下载</a>
-      <a href="#faq">常见问题</a>
-      <a class="gh" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener">GitHub</a>
+      <a href="#features" data-i18n="nav-features">特性</a>
+      <a href="#how" data-i18n="nav-how">工作原理</a>
+      <a href="#start" data-i18n="nav-start">快速开始</a>
+      <a href="#download" data-i18n="nav-download">下载</a>
+      <a href="#faq" data-i18n="nav-faq">常见问题</a>
+      <a class="gh" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="nav-gh">GitHub</a>
+      <button class="lang-btn" id="langBtn" aria-label="Switch language">English</button>
     </div>
     <button class="burger" id="burger" aria-label="打开菜单"><span></span><span></span><span></span></button>
   </div>
@@ -198,13 +205,13 @@
 <!-- ===== Hero ===== -->
 <header class="hero">
   <div class="wrap">
-    <span class="kicker">N2N · 房间式虚拟局域网</span>
-    <h1>把远方的电脑，<br>变成<em>同一个房间</em></h1>
-    <p class="sub">不同网络、不同账号的两台电脑，通过你自己的服务器进入同一个「房间」——
+    <span class="kicker" data-i18n="kicker">N2N · 房间式虚拟局域网</span>
+    <h1><span data-i18n="hero-h1-1">把远方的电脑，</span><br><span data-i18n="hero-h1-2">变成</span><em data-i18n="hero-h1-3">同一个房间</em></h1>
+    <p class="sub" data-i18n="hero-sub">不同网络、不同账号的两台电脑，通过你自己的服务器进入同一个「房间」——
     在游戏眼里你们就在同一张局域网里。专门为 MC 等支持局域网模式的游戏异地联机而做。</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener">下载 Windows 客户端</a>
-      <a class="btn ghost" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener">GitHub 仓库</a>
+      <a class="btn primary" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener" data-i18n="cta-dl">下载 Windows 客户端</a>
+      <a class="btn ghost" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="cta-gh">GitHub 仓库</a>
     </div>
 
     <!-- 拓扑主视觉 -->
@@ -212,16 +219,16 @@
       <svg viewBox="0 0 900 300" role="img" aria-label="网络拓扑示意：公网服务器登记打洞，房主与好友P2P直连">
         <!-- supernode -->
         <rect class="node-sn" x="395" y="30" width="110" height="56" rx="10"/>
-        <text class="cap-sn" x="450" y="52" text-anchor="middle">supernode</text>
-        <text class="cap-sub" x="450" y="70" text-anchor="middle" fill="#8FA3CC">公网 · UDP 7654</text>
+        <text class="cap-sn" x="450" y="52" text-anchor="middle" data-i18n="topo-sn">supernode</text>
+        <text class="cap-sub" x="450" y="70" text-anchor="middle" fill="#8FA3CC" data-i18n="topo-sn-sub">公网 · UDP 7654</text>
         <!-- host -->
         <rect class="node-host" x="40" y="200" width="120" height="56" rx="10"/>
-        <text class="cap" x="100" y="222" text-anchor="middle">房主电脑</text>
-        <text class="cap-sub" x="100" y="240" text-anchor="middle">10.x.0.1</text>
+        <text class="cap" x="100" y="222" text-anchor="middle" data-i18n="topo-host">房主电脑</text>
+        <text class="cap-sub" x="100" y="240" text-anchor="middle" data-i18n="topo-host-ip">10.x.0.1</text>
         <!-- friend -->
         <rect class="node-peer" x="740" y="200" width="120" height="56" rx="10"/>
-        <text class="cap" x="800" y="222" text-anchor="middle">好友电脑</text>
-        <text class="cap-sub" x="800" y="240" text-anchor="middle">10.x.0.2</text>
+        <text class="cap" x="800" y="222" text-anchor="middle" data-i18n="topo-friend">好友电脑</text>
+        <text class="cap-sub" x="800" y="240" text-anchor="middle" data-i18n="topo-friend-ip">10.x.0.2</text>
         <!-- links -->
         <path class="link" d="M100 200 V150 H450 V86"/>
         <path class="link" d="M800 200 V150 H450 V86"/>
@@ -230,8 +237,8 @@
         <!-- relay flow (upper, via supernode) -->
         <path class="flow relay" d="M220 150 H450 V130 H450 V150 H680" opacity=".55"/>
         <!-- labels -->
-        <text class="cap-sub" x="450" y="150" text-anchor="middle">登记 + NAT 打洞</text>
-        <text class="cap-sub" x="450" y="268" text-anchor="middle">打洞成功 → P2P 直连（失败自动走服务器中转）</text>
+        <text class="cap-sub" x="450" y="150" text-anchor="middle" data-i18n="topo-reg">登记 + NAT 打洞</text>
+        <text class="cap-sub" x="450" y="268" text-anchor="middle" data-i18n="topo-p2p">打洞成功 → P2P 直连（失败自动走服务器中转）</text>
       </svg>
     </div>
   </div>
@@ -241,9 +248,9 @@
 <section style="padding-top:20px">
   <div class="wrap">
     <div class="statbar">
-      <div class="stat"><b>免装 Python</b><span>14.5MB 单文件 exe，双击即用</span></div>
-      <div class="stat"><b>密码房 / 免密房</b><span>6 位房间密码，密码错误进不来</span></div>
-      <div class="stat"><b>P2P 直连</b><span>服务器只做登记打洞，不中转流量</span></div>
+      <div class="stat"><b data-i18n="stat1-b">免装 Python</b><span data-i18n="stat1-s">14.5MB 单文件 exe，双击即用</span></div>
+      <div class="stat"><b data-i18n="stat2-b">密码房 / 免密房</b><span data-i18n="stat2-s">6 位房间密码，密码错误进不来</span></div>
+      <div class="stat"><b data-i18n="stat3-b">P2P 直连</b><span data-i18n="stat3-s">服务器只做登记打洞，不中转流量</span></div>
     </div>
   </div>
 </section>
@@ -252,39 +259,39 @@
 <section id="features">
   <div class="wrap">
     <div class="sec-head">
-      <h2>开黑房的正确打开方式</h2>
-      <p>不为联机折腾公网 IP、端口映射和繁琐配置——一个房间码，朋友粘贴即可进房。</p>
+      <h2 data-i18n="feat-title">开黑房的正确打开方式</h2>
+      <p data-i18n="feat-sub">不为联机折腾公网 IP、端口映射和繁琐配置——一个房间码，朋友粘贴即可进房。</p>
     </div>
     <div class="cards">
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#63C74D" stroke-width="1.8"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M8 7V5h8v2M8 13h.01M12 13h.01M16 13h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>
-        <h3>朋友不用装 Python</h3>
-        <p>PyInstaller 打包成单文件 exe，内含运行环境；把客户端 zip 发给朋友，解压双击 start.bat 就能进房。</p>
+        <h3 data-i18n="f1-t">朋友不用装 Python</h3>
+        <p data-i18n="f1-p">PyInstaller 打包成单文件 exe，内含运行环境；把客户端 zip 发给朋友，解压双击 start.bat 就能进房。</p>
       </div>
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D9A03F" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        <h3>密码房 / 免密房</h3>
-        <p>房主可勾选「带密码」：自动生成 6 位数字密码并参与加密密钥派生——密码错误 = 密钥不同 = 进不来，房间码泄露也没用；不勾就是免密房。</p>
+        <h3 data-i18n="f2-t">密码房 / 免密房</h3>
+        <p data-i18n="f2-p">房主可勾选「带密码」：自动生成 6 位数字密码并参与加密密钥派生——密码错误 = 密钥不同 = 进不来，房间码泄露也没用；不勾就是免密房。</p>
       </div>
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#63C74D" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/></svg>
-        <h3>P2P 直连</h3>
-        <p>supernode 只负责「房间登记 + NAT 打洞」，双方打洞成功即 P2P 直连，低延迟不占服务器带宽；打洞失败自动降级服务器中转。</p>
+        <h3 data-i18n="f3-t">P2P 直连</h3>
+        <p data-i18n="f3-p">supernode 只负责「房间登记 + NAT 打洞」，双方打洞成功即 P2P 直连，低延迟不占服务器带宽；打洞失败自动降级服务器中转。</p>
       </div>
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C93C7" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.7-3.8-9S9.5 5.5 12 3z"/></svg>
-        <h3>中英双语界面</h3>
-        <p>自动检测系统语言：中文系统显示中文，英文系统显示英文；也可在「工具与设置 → 语言」随时切换，老外朋友零门槛使用。</p>
+        <h3 data-i18n="f4-t">中英双语界面</h3>
+        <p data-i18n="f4-p">自动检测系统语言：中文系统显示中文，英文系统显示英文；也可在「工具与设置 → 语言」随时切换，老外朋友零门槛使用。</p>
       </div>
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#63C74D" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M12 16v4"/></svg>
-        <h3>Linux 也能进同一个房</h3>
-        <p>附一键进房脚本（join_room_linux.sh），Windows 房主 + Linux 好友同房间互通；下载预编译 n2n v3 edge 即可。</p>
+        <h3 data-i18n="f5-t">Linux 也能进同一个房</h3>
+        <p data-i18n="f5-p">附一键进房脚本（join_room_linux.sh），Windows 房主 + Linux 好友同房间互通；下载预编译 n2n v3 edge 即可。</p>
       </div>
       <div class="card">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9AA3AD" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"/><path d="M9.5 12l2 2 3.5-4"/></svg>
-        <h3>开源可审计</h3>
-        <p>房间管理工具与部署脚本采用 MIT 协议，n2n 引擎 GPLv3、TAP 驱动 GPLv2，来源与许可全部在仓库里写清，可自行复查。</p>
+        <h3 data-i18n="f6-t">开源可审计</h3>
+        <p data-i18n="f6-p">房间管理工具与部署脚本采用 MIT 协议，n2n 引擎 GPLv3、TAP 驱动 GPLv2，来源与许可全部在仓库里写清，可自行复查。</p>
       </div>
     </div>
   </div>
@@ -294,39 +301,39 @@
 <section id="how" style="background:var(--surface); border-block:1px solid var(--border)">
   <div class="wrap">
     <div class="sec-head">
-      <h2>它是怎么把两台电脑变成同一个房间的</h2>
-      <p>一个公网服务器做「房间前台」，登记谁在哪个房间、帮双方打通 NAT——之后你们就直接对话。</p>
+      <h2 data-i18n="how-title">它是怎么把两台电脑变成同一个房间的</h2>
+      <p data-i18n="how-sub">一个公网服务器做「房间前台」，登记谁在哪个房间、帮双方打通 NAT——之后你们就直接对话。</p>
     </div>
     <div class="how">
       <div class="topo-svg">
         <svg viewBox="0 0 460 300" role="img" aria-label="同一房间 = 同一 community 虚拟局域网">
           <rect class="node-sn" x="160" y="14" width="140" height="50" rx="10"/>
-          <text class="cap-sn" x="230" y="34" text-anchor="middle">supernode</text>
-          <text class="cap-sub" x="230" y="52" text-anchor="middle" fill="#8FA3CC">只登记 · 只打洞</text>
+          <text class="cap-sn" x="230" y="34" text-anchor="middle" data-i18n="how-sn">supernode</text>
+          <text class="cap-sub" x="230" y="52" text-anchor="middle" fill="#8FA3CC" data-i18n="how-sn-sub">只登记 · 只打洞</text>
           <rect class="node-host" x="10" y="200" width="130" height="56" rx="10"/>
-          <text class="cap" x="75" y="222" text-anchor="middle">房主 10.x.0.1</text>
-          <text class="cap-sub" x="75" y="240" text-anchor="middle">community 相同</text>
+          <text class="cap" x="75" y="222" text-anchor="middle" data-i18n="how-host">房主 10.x.0.1</text>
+          <text class="cap-sub" x="75" y="240" text-anchor="middle" data-i18n="how-host-sub">community 相同</text>
           <rect class="node-peer" x="320" y="200" width="130" height="56" rx="10"/>
-          <text class="cap" x="385" y="222" text-anchor="middle">好友 10.x.0.2</text>
-          <text class="cap-sub" x="385" y="240" text-anchor="middle">community 相同</text>
+          <text class="cap" x="385" y="222" text-anchor="middle" data-i18n="how-friend">好友 10.x.0.2</text>
+          <text class="cap-sub" x="385" y="240" text-anchor="middle" data-i18n="how-friend-sub">community 相同</text>
           <path class="link" d="M75 200 V130 H230 V64"/>
           <path class="link" d="M385 200 V130 H230 V64"/>
           <path class="flow" d="M140 228 H320"/>
-          <text class="cap-sub" x="230" y="284" text-anchor="middle">同一房间 = 同一虚拟局域网：ping 得通、互见 MC 局域网世界</text>
+          <text class="cap-sub" x="230" y="284" text-anchor="middle" data-i18n="how-bottom">同一房间 = 同一虚拟局域网：ping 得通、互见 MC 局域网世界</text>
         </svg>
       </div>
       <ol>
         <li>
-          <b>服务器只做「前台」</b>
-          <p>部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行），它只登记房间成员、帮忙打通 NAT，不碰你的游戏流量。</p>
+          <b data-i18n="how-li1-b">服务器只做「前台」</b>
+          <p data-i18n="how-li1-p">部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行），它只登记房间成员、帮忙打通 NAT，不碰你的游戏流量。</p>
         </li>
         <li>
-          <b>房间码 = 房间的身份</b>
-          <p>房主创建房间自动生成房间码（community@网段#密钥），密钥即传输加密口令；带密码房间再叠加 6 位数字密码。</p>
+          <b data-i18n="how-li2-b">房间码 = 房间的身份</b>
+          <p data-i18n="how-li2-p">房主创建房间自动生成房间码（community@网段#密钥），密钥即传输加密口令；带密码房间再叠加 6 位数字密码。</p>
         </li>
         <li>
-          <b>进房后 P2P 直连</b>
-          <p>双方都拿到虚拟 IP（10.x.0.x），打洞成功就直连互访；打洞失败自动降级为服务器中转，房间依然可用。</p>
+          <b data-i18n="how-li3-b">进房后 P2P 直连</b>
+          <p data-i18n="how-li3-p">双方都拿到虚拟 IP（10.x.0.x），打洞成功就直连互访；打洞失败自动降级为服务器中转，房间依然可用。</p>
         </li>
       </ol>
     </div>
@@ -337,24 +344,24 @@
 <section id="start">
   <div class="wrap">
     <div class="sec-head">
-      <h2>三步开黑</h2>
-      <p>从部署到进游戏，全程大约十分钟。完整的服务器部署与排障说明在仓库 README 里。</p>
+      <h2 data-i18n="start-title">三步开黑</h2>
+      <p data-i18n="start-sub">从部署到进游戏，全程大约十分钟。完整的服务器部署与排障说明在仓库 README 里。</p>
     </div>
     <div class="steps">
       <div class="step">
         <span class="num">01</span>
-        <h3>部署公网服务器</h3>
-        <p>有公网 IP 的机器（云服务器或家庭宽带+端口转发）跑一个 supernode：<br><code>bash deploy_supernode.sh</code><br>Windows 服务器就双击 <code>start_supernode.bat</code>。</p>
+        <h3 data-i18n="s1-t">部署公网服务器</h3>
+        <p><span data-i18n="s1-p1">有公网 IP 的机器（云服务器或家庭宽带+端口转发）跑一个 supernode：</span><br><code>bash deploy_supernode.sh</code><br><span data-i18n="s1-p2">Windows 服务器就双击</span> <code>start_supernode.bat</code><span data-i18n="s1-p3">。</span></p>
       </div>
       <div class="step">
         <span class="num">02</span>
-        <h3>房主创建房间</h3>
-        <p>打开房间管理小工具，填服务器地址并保存，点「创建房间」。自动生成房间码；勾选「带密码」则再生成 6 位密码，密码单独发给好友。</p>
+        <h3 data-i18n="s2-t">房主创建房间</h3>
+        <p><span data-i18n="s2-p">打开房间管理小工具，填服务器地址并保存，点「创建房间」。自动生成房间码；勾选「带密码」则再生成 6 位密码，密码单独发给好友。</span></p>
       </div>
       <div class="step">
         <span class="num">03</span>
-        <h3>好友粘贴进房</h3>
-        <p>好友粘贴房间码（带密码房再填密码），点「加入房间」自动分配虚拟 IP。双方显示「已连接」后，MC 里直接连接 <code>10.x.0.1:25565</code> 即可。</p>
+        <h3 data-i18n="s3-t">好友粘贴进房</h3>
+        <p><span data-i18n="s3-p1">好友粘贴房间码（带密码房再填密码），点「加入房间」自动分配虚拟 IP。双方显示「已连接」后，MC 里直接连接</span> <code>10.x.0.1:25565</code> <span data-i18n="s3-p2">即可。</span></p>
       </div>
     </div>
   </div>
@@ -364,21 +371,21 @@
 <section id="download" style="background:var(--surface); border-block:1px solid var(--border)">
   <div class="wrap">
     <div class="sec-head">
-      <h2>下载</h2>
-      <p>所有版本都从 GitHub Releases 获取；源码与完整文档在仓库中。</p>
+      <h2 data-i18n="dl-title">下载</h2>
+      <p data-i18n="dl-sub">所有版本都从 GitHub Releases 获取；源码与完整文档在仓库中。</p>
     </div>
     <div class="dl">
       <div class="dl-box">
-        <h3>Windows 客户端</h3>
+        <h3 data-i18n="dl1-t">Windows 客户端</h3>
         <div class="meta">n2n-lan-client.zip · ≈14.5MB</div>
-        <p>免 Python 单文件 exe + 驱动 + 脚本整包。解压后连同 bin/、driver/、tools/ 一起保留，双击 start.bat 即可。</p>
-        <a class="btn primary" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener">前往 Releases 下载</a>
+        <p data-i18n="dl1-p">免 Python 单文件 exe + 驱动 + 脚本整包。解压后连同 bin/、driver/、tools/ 一起保留，双击 start.bat 即可。</p>
+        <a class="btn primary" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener" data-i18n="dl1-btn">前往 Releases 下载</a>
       </div>
       <div class="dl-box">
-        <h3>源码 / Linux 脚本</h3>
+        <h3 data-i18n="dl2-t">源码 / Linux 脚本</h3>
         <div class="meta">github.com/zgs7157/n2n-lan</div>
-        <p>房间管理工具源码（Python）、Linux 一键部署脚本、Docker 方案、Linux 进房脚本 join_room_linux.sh 都在仓库。</p>
-        <a class="btn ghost" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener">打开仓库</a>
+        <p data-i18n="dl2-p">房间管理工具源码（Python）、Linux 一键部署脚本、Docker 方案、Linux 进房脚本 join_room_linux.sh 都在仓库。</p>
+        <a class="btn ghost" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="dl2-btn">打开仓库</a>
       </div>
     </div>
   </div>
@@ -388,24 +395,24 @@
 <section id="faq">
   <div class="wrap">
     <div class="sec-head">
-      <h2>常见问题</h2>
-      <p>几句话讲清最容易踩的坑。</p>
+      <h2 data-i18n="faq-title">常见问题</h2>
+      <p data-i18n="faq-sub">几句话讲清最容易踩的坑。</p>
     </div>
     <details open>
-      <summary>家里没有公网 IP，还能用吗？</summary>
-      <p>能。家庭宽带最常见：路由器做「端口转发」，把 UDP 7654 转发到服务器内网 IP（比如 192.168.1.4），客户端统一填你的公网 IPv4:7654 即可；公网 IP 会变就配个 DDNS。改不了路由器就用公共 supernode 节点（README 有说明）。</p>
+      <summary data-i18n="q1-t">家里没有公网 IP，还能用吗？</summary>
+      <p data-i18n="q1-p">能。家庭宽带最常见：路由器做「端口转发」，把 UDP 7654 转发到服务器内网 IP（比如 192.168.1.4），客户端统一填你的公网 IPv4:7654 即可；公网 IP 会变就配个 DDNS。改不了路由器就用公共 supernode 节点（README 有说明）。</p>
     </details>
     <details>
-      <summary>为什么不能只把 exe 发给朋友？</summary>
-      <p>exe 需要同目录的 bin/（edge 引擎）、driver/（TAP 虚拟网卡驱动）、tools/ 一起工作。请把整个解压后的文件夹发给对方，或直接发 zip。</p>
+      <summary data-i18n="q2-t">为什么不能只把 exe 发给朋友？</summary>
+      <p data-i18n="q2-p">exe 需要同目录的 bin/（edge 引擎）、driver/（TAP 虚拟网卡驱动）、tools/ 一起工作。请把整个解压后的文件夹发给对方，或直接发 zip。</p>
     </details>
     <details>
-      <summary>双方都显示「已连接」但游戏里看不到对方？</summary>
-      <p>先确认房间码网段一致、密码正确（密码错 = 密钥不同 = 进不来）；再确认 MC 版本和模组完全一致。版本一致还看不到，就用「直接连接」填房主虚拟 IP:25565，绕开局域网发现。</p>
+      <summary data-i18n="q3-t">双方都显示「已连接」但游戏里看不到对方？</summary>
+      <p data-i18n="q3-p">先确认房间码网段一致、密码正确（密码错 = 密钥不同 = 进不来）；再确认 MC 版本和模组完全一致。版本一致还看不到，就用「直接连接」填房主虚拟 IP:25565，绕开局域网发现。</p>
     </details>
     <details>
-      <summary>延迟高、卡顿怎么办？</summary>
-      <p>延迟高通常是 NAT 打洞失败走了服务器中转。换离双方都近的服务器地域，或在设置里把 MTU 调低到 1200 再试；房间成员建议不超过 10 人。</p>
+      <summary data-i18n="q4-t">延迟高、卡顿怎么办？</summary>
+      <p data-i18n="q4-p">延迟高通常是 NAT 打洞失败走了服务器中转。换离双方都近的服务器地域，或在设置里把 MTU 调低到 1200 再试；房间成员建议不超过 10 人。</p>
     </details>
   </div>
 </section>
@@ -413,10 +420,10 @@
 <!-- ===== Footer ===== -->
 <footer>
   <div class="wrap foot">
-    <div class="license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
+    <div class="license" data-i18n="foot-license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
     <div class="links">
-      <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener">文档</a>
+      <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="foot-gh">GitHub</a>
+      <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot-doc">文档</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README_EN.md" target="_blank" rel="noopener">English</a>
     </div>
   </div>
@@ -424,14 +431,115 @@
 
 <script>
 (function(){
-  var burger=document.getElementById('burger');
-  var links=document.getElementById('navLinks');
-  if(burger&&links){
-    burger.addEventListener('click',function(){
-      links.classList.toggle('open');
+  var I18N = {
+    zh: {
+      "doc-title":"n2n 房间式虚拟局域网 — MC 异地联机工具",
+      "logo":"n2n 房间 LAN",
+      "nav-features":"特性","nav-how":"工作原理","nav-start":"快速开始","nav-download":"下载","nav-faq":"常见问题","nav-gh":"GitHub",
+      "kicker":"N2N · 房间式虚拟局域网",
+      "hero-h1-1":"把远方的电脑，","hero-h1-2":"变成","hero-h1-3":"同一个房间",
+      "hero-sub":"不同网络、不同账号的两台电脑，通过你自己的服务器进入同一个「房间」——在游戏眼里你们就在同一张局域网里。专门为 MC 等支持局域网模式的游戏异地联机而做。",
+      "cta-dl":"下载 Windows 客户端","cta-gh":"GitHub 仓库",
+      "topo-sn":"supernode","topo-sn-sub":"公网 · UDP 7654","topo-host":"房主电脑","topo-host-ip":"10.x.0.1","topo-friend":"好友电脑","topo-friend-ip":"10.x.0.2","topo-reg":"登记 + NAT 打洞","topo-p2p":"打洞成功 → P2P 直连（失败自动走服务器中转）",
+      "stat1-b":"免装 Python","stat1-s":"14.5MB 单文件 exe，双击即用",
+      "stat2-b":"密码房 / 免密房","stat2-s":"6 位房间密码，密码错误进不来",
+      "stat3-b":"P2P 直连","stat3-s":"服务器只做登记打洞，不中转流量",
+      "feat-title":"开黑房的正确打开方式","feat-sub":"不为联机折腾公网 IP、端口映射和繁琐配置——一个房间码，朋友粘贴即可进房。",
+      "f1-t":"朋友不用装 Python","f1-p":"PyInstaller 打包成单文件 exe，内含运行环境；把客户端 zip 发给朋友，解压双击 start.bat 就能进房。",
+      "f2-t":"密码房 / 免密房","f2-p":"房主可勾选「带密码」：自动生成 6 位数字密码并参与加密密钥派生——密码错误 = 密钥不同 = 进不来，房间码泄露也没用；不勾就是免密房。",
+      "f3-t":"P2P 直连","f3-p":"supernode 只负责「房间登记 + NAT 打洞」，双方打洞成功即 P2P 直连，低延迟不占服务器带宽；打洞失败自动降级服务器中转。",
+      "f4-t":"中英双语界面","f4-p":"自动检测系统语言：中文系统显示中文，英文系统显示英文；也可在「工具与设置 → 语言」随时切换，老外朋友零门槛使用。",
+      "f5-t":"Linux 也能进同一个房","f5-p":"附一键进房脚本（join_room_linux.sh），Windows 房主 + Linux 好友同房间互通；下载预编译 n2n v3 edge 即可。",
+      "f6-t":"开源可审计","f6-p":"房间管理工具与部署脚本采用 MIT 协议，n2n 引擎 GPLv3、TAP 驱动 GPLv2，来源与许可全部在仓库里写清，可自行复查。",
+      "how-title":"它是怎么把两台电脑变成同一个房间的","how-sub":"一个公网服务器做「房间前台」，登记谁在哪个房间、帮双方打通 NAT——之后你们就直接对话。",
+      "how-sn":"supernode","how-sn-sub":"只登记 · 只打洞","how-host":"房主 10.x.0.1","how-host-sub":"community 相同","how-friend":"好友 10.x.0.2","how-friend-sub":"community 相同","how-bottom":"同一房间 = 同一虚拟局域网：ping 得通、互见 MC 局域网世界",
+      "how-li1-b":"服务器只做「前台」","how-li1-p":"部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行），它只登记房间成员、帮忙打通 NAT，不碰你的游戏流量。",
+      "how-li2-b":"房间码 = 房间的身份","how-li2-p":"房主创建房间自动生成房间码（community@网段#密钥），密钥即传输加密口令；带密码房间再叠加 6 位数字密码。",
+      "how-li3-b":"进房后 P2P 直连","how-li3-p":"双方都拿到虚拟 IP（10.x.0.x），打洞成功就直连互访；打洞失败自动降级为服务器中转，房间依然可用。",
+      "start-title":"三步开黑","start-sub":"从部署到进游戏，全程大约十分钟。完整的服务器部署与排障说明在仓库 README 里。",
+      "s1-t":"部署公网服务器","s1-p1":"有公网 IP 的机器（云服务器或家庭宽带+端口转发）跑一个 supernode：","s1-p2":"Windows 服务器就双击","s1-p3":"。",
+      "s2-t":"房主创建房间","s2-p":"打开房间管理小工具，填服务器地址并保存，点「创建房间」。自动生成房间码；勾选「带密码」则再生成 6 位密码，密码单独发给好友。",
+      "s3-t":"好友粘贴进房","s3-p1":"好友粘贴房间码（带密码房再填密码），点「加入房间」自动分配虚拟 IP。双方显示「已连接」后，MC 里直接连接","s3-p2":"即可。",
+      "dl-title":"下载","dl-sub":"所有版本都从 GitHub Releases 获取；源码与完整文档在仓库中。",
+      "dl1-t":"Windows 客户端","dl1-p":"免 Python 单文件 exe + 驱动 + 脚本整包。解压后连同 bin/、driver/、tools/ 一起保留，双击 start.bat 即可。","dl1-btn":"前往 Releases 下载",
+      "dl2-t":"源码 / Linux 脚本","dl2-p":"房间管理工具源码（Python）、Linux 一键部署脚本、Docker 方案、Linux 进房脚本 join_room_linux.sh 都在仓库。","dl2-btn":"打开仓库",
+      "faq-title":"常见问题","faq-sub":"几句话讲清最容易踩的坑。",
+      "q1-t":"家里没有公网 IP，还能用吗？","q1-p":"能。家庭宽带最常见：路由器做「端口转发」，把 UDP 7654 转发到服务器内网 IP（比如 192.168.1.4），客户端统一填你的公网 IPv4:7654 即可；公网 IP 会变就配个 DDNS。改不了路由器就用公共 supernode 节点（README 有说明）。",
+      "q2-t":"为什么不能只把 exe 发给朋友？","q2-p":"exe 需要同目录的 bin/（edge 引擎）、driver/（TAP 虚拟网卡驱动）、tools/ 一起工作。请把整个解压后的文件夹发给对方，或直接发 zip。",
+      "q3-t":"双方都显示「已连接」但游戏里看不到对方？","q3-p":"先确认房间码网段一致、密码正确（密码错 = 密钥不同 = 进不来）；再确认 MC 版本和模组完全一致。版本一致还看不到，就用「直接连接」填房主虚拟 IP:25565，绕开局域网发现。",
+      "q4-t":"延迟高、卡顿怎么办？","q4-p":"延迟高通常是 NAT 打洞失败走了服务器中转。换离双方都近的服务器地域，或在设置里把 MTU 调低到 1200 再试；房间成员建议不超过 10 人。",
+      "foot-license":"MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源","foot-gh":"GitHub","foot-doc":"文档"
+    },
+    en: {
+      "doc-title":"N2N Room LAN — Minecraft co-op over the Internet",
+      "logo":"n2n Room LAN",
+      "nav-features":"Features","nav-how":"How it works","nav-start":"Quick start","nav-download":"Download","nav-faq":"FAQ","nav-gh":"GitHub",
+      "kicker":"N2N · Room-style Virtual LAN",
+      "hero-h1-1":"Turn distant computers","hero-h1-2":"into ","hero-h1-3":"one room",
+      "hero-sub":"Two PCs on different networks, with different accounts, join the same \"room\" through your own server. To the game, you're on the same LAN. Built for Minecraft and any game with a LAN/co-op mode.",
+      "cta-dl":"Download Windows client","cta-gh":"GitHub repo",
+      "topo-sn":"supernode","topo-sn-sub":"Public · UDP 7654","topo-host":"Host PC","topo-host-ip":"10.x.0.1","topo-friend":"Friend PC","topo-friend-ip":"10.x.0.2","topo-reg":"Register + NAT hole-punch","topo-p2p":"P2P after hole-punch (server relay fallback)",
+      "stat1-b":"No Python needed","stat1-s":"14.5MB single-file exe, double-click to run",
+      "stat2-b":"Password / open rooms","stat2-s":"6-digit room password; wrong password can't join",
+      "stat3-b":"Direct P2P","stat3-s":"Server only registers & hole-punches, never relays traffic",
+      "feat-title":"The right way to set up a co-op room","feat-sub":"No public IP, port-forwarding or config hunting — share one room code, friends paste it and join.",
+      "f1-t":"Friends don't need Python","f1-p":"Packaged as a single-file exe with the runtime included. Send the client zip to a friend; they unzip and double-click start.bat to join.",
+      "f2-t":"Password / open rooms","f2-p":"Host can tick \"Password\": a 6-digit password is generated and mixed into the encryption key — wrong password = different key = can't join, even if the room code leaks. Untick it for an open room.",
+      "f3-t":"Direct P2P","f3-p":"The supernode only registers members and hole-punches NAT. Once punched, peers connect directly with low latency; it falls back to server relay automatically.",
+      "f4-t":"Bilingual UI (中文 / English)","f4-p":"Auto-detects the system language — Chinese systems get 中文, others get English. Switch anytime under \"Tools & Settings → Language\".",
+      "f5-t":"Linux joins the same room","f5-p":"One-click join script (join_room_linux.sh) included. A Windows host and a Linux friend play in the same room; just grab the prebuilt n2n v3 edge.",
+      "f6-t":"Open source & auditable","f6-p":"Room manager and deploy scripts are MIT; n2n engine is GPLv3 and the TAP driver GPLv2. Licenses and sources are all documented in the repo.",
+      "how-title":"How two PCs become one room","how-sub":"One public server acts as the \"room front desk\" — it registers who is in which room and helps punch through NAT. After that, you talk directly.",
+      "how-sn":"supernode","how-sn-sub":"register · punch only","how-host":"Host 10.x.0.1","how-host-sub":"same community","how-friend":"Friend 10.x.0.2","how-friend-sub":"same community","how-bottom":"Same room = same virtual LAN: ping works, MC LAN worlds visible",
+      "how-li1-b":"The server is only the \"front desk\"","how-li1-p":"Deploy a public supernode (Linux one-click script / Windows bat / Docker). It only registers members and punches NAT — it never touches your game traffic.",
+      "how-li2-b":"Room code = room identity","how-li2-p":"The host creates a room and gets a code (community@subnet#key). The key is the transport encryption passphrase; password rooms add a 6-digit password on top.",
+      "how-li3-b":"Direct P2P after joining","how-li3-p":"Everyone gets a virtual IP (10.x.0.x). Once punched through, peers connect directly; on failure it automatically degrades to server relay and the room keeps working.",
+      "start-title":"Start playing in 3 steps","start-sub":"From deploy to in-game in about 10 minutes. Full server setup and troubleshooting live in the repo README.",
+      "s1-t":"Deploy a public server","s1-p1":"On a machine with a public IP (cloud server, or home broadband + port forwarding), run a supernode:","s1-p2":"On a Windows server, just double-click","s1-p3":".",
+      "s2-t":"Host creates a room","s2-p":"Open the Room Manager, fill in the server address and save, click \"Create Room\". A room code is generated automatically; tick \"Password\" for a 6-digit code to send to friends separately.",
+      "s3-t":"Friend pastes & joins","s3-p1":"Friend pastes the room code (plus the password for password rooms) and clicks \"Join Room\" — a virtual IP is assigned automatically. Once both show \"Connected\", connect to","s3-p2":"in Minecraft.",
+      "dl-title":"Download","dl-sub":"All versions come from GitHub Releases; source code and full docs are in the repo.",
+      "dl1-t":"Windows client","dl1-p":"No-Python single-file exe + driver + scripts. Unzip and keep bin/, driver/ and tools/ together, then double-click start.bat.","dl1-btn":"Get it from Releases",
+      "dl2-t":"Source / Linux scripts","dl2-p":"Room manager source (Python), Linux one-click deploy script, Docker option and the join_room_linux.sh script all live in the repo.","dl2-btn":"Open the repo",
+      "faq-title":"FAQ","faq-sub":"The pitfalls people hit most, in a few lines.",
+      "q1-t":"No public IP at home — does it still work?","q1-p":"Yes. The common home case: set up \"port forwarding\" on your router, forward UDP 7654 to the server's LAN IP (e.g. 192.168.1.4), and everyone enters your public IPv4:7654. If the IP changes, add DDNS. If you can't touch the router, use a public supernode (see README).",
+      "q2-t":"Why can't I just send my friend the exe?","q2-p":"The exe needs the bin/ (edge engine), driver/ (TAP virtual NIC) and tools/ folders beside it. Send the whole unzipped folder, or just the zip.",
+      "q3-t":"Both show \"Connected\" but we can't see each other in-game?","q3-p":"First check the subnet matches and the password is right (wrong password = different key = can't join). Then make sure the Minecraft version and mods are identical. If versions match, use \"Direct Connect\" to the host's virtual IP:25565 to bypass LAN discovery.",
+      "q4-t":"High latency / lag?","q4-p":"Lag usually means NAT hole-punching failed and traffic goes through the server relay. Move the server closer to both players, or lower the MTU to 1200 in settings; keep rooms at 10 players or fewer.",
+      "foot-license":"MIT License · built on n2n (GPLv3) & OpenVPN TAP driver (GPLv2) · this page is open source like the project","foot-gh":"GitHub","foot-doc":"Docs"
+    }
+  };
+
+  var current = 'zh';
+  try { current = localStorage.getItem('n2n-lang') || 'zh'; } catch(e){}
+  var btn = document.getElementById('langBtn');
+
+  function apply(lang){
+    current = lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    var dict = I18N[lang] || I18N.zh;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k = el.getAttribute('data-i18n');
+      if (dict[k] !== undefined) el.textContent = dict[k];
     });
-    links.addEventListener('click',function(e){
-      if(e.target.tagName==='A'){links.classList.remove('open');}
+    document.title = dict['doc-title'];
+    btn.textContent = lang === 'zh' ? 'English' : '中文';
+    try { localStorage.setItem('n2n-lang', lang); } catch(e){}
+  }
+
+  if (btn) {
+    btn.addEventListener('click', function(){
+      apply(current === 'zh' ? 'en' : 'zh');
+    });
+    apply(current);
+  }
+
+  var burger = document.getElementById('burger');
+  var links = document.getElementById('navLinks');
+  if (burger && links) {
+    burger.addEventListener('click', function(){ links.classList.toggle('open'); });
+    links.addEventListener('click', function(e){
+      if (e.target.tagName === 'A'){ links.classList.remove('open'); }
     });
   }
 })();
