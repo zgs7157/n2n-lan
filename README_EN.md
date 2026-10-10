@@ -211,17 +211,17 @@ Put `server/visit_stats.exe` and `server/start_stats.bat` in the same folder and
 - Allow inbound TCP 8088 in Windows Firewall.
 - Forward TCP 8088 on your router to the server's LAN IP (e.g. 192.168.1.4).
 
-### 3. Admin page
+### 3. Admin page (either way works)
 
-```
-http://YOUR_PUBLIC_IP:8088/admin?key=YOUR_ADMIN_KEY
-```
+- **IPv4**: `http://YOUR_PUBLIC_IP:8088/admin?key=YOUR_ADMIN_KEY` (requires router port forwarding for TCP 8088)
+- **IPv6 (recommended, no forwarding needed)**: `http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/admin?key=YOUR_ADMIN_KEY`
+  — works directly when your broadband has IPv6 (every device has a public IPv6 address; no router setup). The IPv6 address can change with your ISP, so update the website tracking URLs accordingly.
 
 Shows: today PV/UV, total PV/UV, last 7 days, latest 30 visits (time / IP / page / UA).
 
 ### 4. Website tracking
 
-The website already contains the tracking script and the Footer visitor badge (`docs/index.html`), both pointing to `http://39.162.81.68:8088`. **If your public IP changes**, update those two occurrences of `39.162.81.68:8088` in the site, then push (Pages redeploys automatically).
+The website already contains the tracking script and the Footer visitor badge (`docs/index.html`), sending to both IPv4 and IPv6: `http://39.162.81.68:8088` and `http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088` — whichever is reachable wins. **If your IP changes**, update the corresponding URLs in the site (wrap IPv6 addresses in square brackets `[]`), then push (Pages redeploys automatically).
 
 ### 5. Stop / remove
 

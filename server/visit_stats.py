@@ -20,6 +20,7 @@ n2n 官网访问统计服务（自建）
 
 import json
 import os
+import socket
 import sqlite3
 import time
 import urllib.parse
@@ -70,6 +71,18 @@ def q_int(q, name, default=0):
         return default
 
 
+class StatsServer(ThreadingHTTPServer):
+    """IPv4 + IPv6 双栈监听（IPv6 无 NAT，公网可直接访问）"""
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except OSError:
+            pass
+        super().server_bind()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "n2n-stats"
 
@@ -96,6 +109,8 @@ class Handler(BaseHTTPRequestHandler):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         page = (q.get("page") or ["home"])[0][:80] or "home"
         ip = self.client_address[0]
+        if ip.startswith("::ffff:"):  # IPv4 经双栈进入时去掉映射前缀
+            ip = ip[7:]
         ua = self.headers.get("User-Agent", "")[:200]
         try:
             conn = get_db()
@@ -256,7 +271,7 @@ def main():
     print("db:", DB_PATH)
     print("admin key:", cfg.get("admin_key"))
     print("listening on port", port)
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    StatsServer(("::", port), Handler).serve_forever()
 
 
 if __name__ == "__main__":

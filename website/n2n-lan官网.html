@@ -421,7 +421,7 @@
 <footer>
   <div class="wrap foot">
     <div class="license" data-i18n="foot-license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
-    <img src="http://39.162.81.68:8088/badge.svg" alt="访问量" style="height:20px;vertical-align:middle">
+    <img src="http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/badge.svg" alt="访问量" style="height:20px;vertical-align:middle">
     <div class="links">
       <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="foot-gh">GitHub</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot-doc">文档</a>
@@ -432,10 +432,15 @@
 
 <script>
 (function(){
-  // 访问统计打点（自建服务，图片方式兼容 HTTPS→HTTP；公网 IP 变化需同步更新此处与 footer 徽章）
+  // 访问统计打点（自建服务，图片方式兼容 HTTPS→HTTP；IPv4 与 IPv6 双发，谁通谁记录）
+  // 地址变更：更新下面两处 IP（IPv6 公网直连，无需路由器转发）
   try {
     var _st = new Image();
-    _st.src = "http://39.162.81.68:8088/hit?page=home&r=" + Date.now();
+    _st.src = "http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/hit?page=home&r=" + Date.now();
+  } catch(e){}
+  try {
+    var _st4 = new Image();
+    _st4.src = "http://39.162.81.68:8088/hit?page=home&r=" + Date.now();
   } catch(e){}
 
   var I18N = {
