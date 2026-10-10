@@ -18,3 +18,7 @@ client/n2n_room_manager.exe
 
 # 许可不明的第三方工具（EasyN2N 提取，请按 README 自行获取）
 client/tools/WinIPBroadcast.exe
+
+# 官网：自检截图与本地部署目录不入仓库（发布源为 docs/）
+website/_shots/
+website/dist/
