@@ -41,6 +41,7 @@ if getattr(sys, "frozen", False):
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EDGE_EXE = os.path.join(BASE_DIR, "bin", "edge.exe")
+FORWARDER_EXE = os.path.join(BASE_DIR, "bin", "udp6_client_forward.exe")
 DRIVER_DIR = os.path.join(BASE_DIR, "driver", "tap-windows", "x64")
 TAP_INF = os.path.join(DRIVER_DIR, "OemVista.inf")
 TAP_INSTALLER = os.path.join(BASE_DIR, "driver", "tap-windows", "9.24.7.exe")
@@ -75,7 +76,7 @@ RE_SUBNET = re.compile(r"^10\.(\d{1,3})\.0$")
 LANG_ZH = {
     "app_title": "n2n 房间管理小工具",
     "server_frame": "服务器（公网 supernode）",
-    "server_fmt": "格式 IP:端口，多个用逗号分隔",
+    "server_fmt": "格式 IP:端口 或 IPv6 地址（如 2409:xxxx），IPv6 自动走转发器；多个用逗号分隔",
     "save": "保存",
     "room_frame": "房间",
     "create_room": "创建房间（我是房主）",
@@ -150,6 +151,7 @@ LANG_ZH = {
     "log_edge_start": ">> 启动 edge：房间=%(room)s  虚拟IP=%(ip)s",
     "log_supernode": ">> supernode: %(sn)s",
     "log_edge_pid": ">> edge 已启动 (pid=%(pid)s)，等待注册…",
+    "log_fw_started": ">> 检测到 IPv6 supernode [%(v6)s]，已启动本地转发器 127.0.0.1:%(lp)d → IPv6",
     "log_left": ">> 已退出房间",
     "log_copy_pwd": ">> 房间码已复制；房间密码需单独发给好友（在“房间密码”框里复制）",
     "log_copy_nopwd": ">> 免密房间，房间码已复制，发给好友即可加入",
@@ -161,7 +163,7 @@ LANG_ZH = {
 LANG_EN = {
     "app_title": "N2N Room Manager",
     "server_frame": "Server (public supernode)",
-    "server_fmt": "Format IP:port, comma separated",
+    "server_fmt": "Format IP:port or an IPv6 address (e.g. 2409:xxxx); IPv6 uses local forwarder; comma separated",
     "save": "Save",
     "room_frame": "Room",
     "create_room": "Create Room (I'm host)",
@@ -236,6 +238,7 @@ LANG_EN = {
     "log_edge_start": ">> Starting edge: room=%(room)s  virtual IP=%(ip)s",
     "log_supernode": ">> supernode: %(sn)s",
     "log_edge_pid": ">> edge started (pid=%(pid)s), waiting to register...",
+    "log_fw_started": ">> IPv6 supernode [%(v6)s] detected, local forwarder started on 127.0.0.1:%(lp)d -> IPv6",
     "log_left": ">> Left the room",
     "log_copy_pwd": ">> Room code copied; send the password separately (copy from the 'Room Password' box)",
     "log_copy_nopwd": ">> No-password room; room code copied, send it to your friend",
@@ -397,6 +400,48 @@ def make_join_link(host, port=25565, room="开黑房"):
         int(port),
         urllib.parse.quote(str(room).strip(), safe=""),
     )
+
+
+def parse_supernode(sn):
+    """解析 supernode 输入，返回 (kind, host, port)。
+    kind: "v6"（IPv6 地址，端口默认 7654，edge 不认 IPv6 地址，需走转发器）
+          "v4"（IPv4 或域名，host:port 或纯 host）
+    支持格式：1.2.3.4:7654 / host:port / [2409:xxxx]:7654 / 2409:xxxx（多冒号视为 IPv6）
+    """
+    sn = sn.strip()
+    if sn.startswith("["):
+        m = re.match(r"\[([^\]]+)\](?::(\d+))?", sn)
+        if m:
+            return "v6", m.group(1), int(m.group(2) or 7654)
+    if sn.count(":") >= 2:
+        return "v6", sn, 7654
+    if ":" in sn:
+        h, p = sn.rsplit(":", 1)
+        try:
+            return "v4", h.strip(), int(p)
+        except ValueError:
+            return "v4", sn, 7654
+    return "v4", sn, 7654
+
+
+def get_local_ipv6s():
+    """返回本机当前的 IPv6 地址列表（小写）。用于判断"开房者填的是不是自己"。"""
+    addrs = set()
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+             "(Get-NetIPAddress -AddressFamily IPv6 -ErrorAction SilentlyContinue | "
+             "Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress"],
+            capture_output=True, text=True, timeout=30,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        ).stdout
+        for line in out.splitlines():
+            a = line.strip().lower()
+            if a:
+                addrs.add(a)
+    except Exception:
+        pass
+    return addrs
 
 
 def chat_broadcast_addr(virtual_ip):
@@ -595,10 +640,60 @@ class EdgeSession:
         self.tailer = None
         self.log_path = None
         self.broadcast_proc = None
+        self.fw_procs = []      # IPv6 转发器进程列表
 
     @property
     def running(self):
         return self.proc is not None and self.proc.poll() is None
+
+    @staticmethod
+    def _port_free(port):
+        """探测本机 UDP 端口是否空闲。"""
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+        finally:
+            s.close()
+
+    def _start_forwarder(self, v6host, server_port):
+        """为 IPv6 supernode 启动一个本地转发器（127.0.0.1:<本地端口> -> [v6host]:server_port）。
+        返回实际使用的本地端口；失败返回 None。"""
+        if not os.path.exists(FORWARDER_EXE):
+            return None
+        # 本地端口从 7655 起：7654 是 supernode 惯例端口，本机若同时开着
+        # supernode（0.0.0.0:7654），转发器 bind 127.0.0.1:7654 会因
+        # SO_REUSEADDR 并存而探测失真，导致环回；避开 7654 两个场景都安全。
+        for lp in range(7655, 7663):
+            if not self._port_free(lp):
+                continue
+            try:
+                p = subprocess.Popen(
+                    [FORWARDER_EXE, v6host, str(lp), str(server_port)],
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except Exception:
+                continue
+            # 轮询等待转发器真正开始监听（onefile 首启解包可能需 2-4 秒）
+            deadline = time.time() + 8
+            ok = False
+            while time.time() < deadline:
+                if p.poll() is not None:
+                    break          # 进程已退出 = 启动失败
+                if not self._port_free(lp):
+                    ok = True      # 端口已被转发器占用 = 监听成功
+                    break
+                time.sleep(0.4)
+            if ok:
+                self.fw_procs.append(p)
+                return lp
+            try:
+                p.terminate()
+            except Exception:
+                pass
+        return None
 
     def start(self, community, key, ip, supernode_list):
         self.stop()
@@ -606,9 +701,25 @@ class EdgeSession:
         self.log_path = os.path.join(LOG_DIR, "edge_%s.log" % re.sub(r"[^A-Za-z0-9_-]", "_", community))
 
         args = [EDGE_EXE, "-c", community, "-k", key, "-a", ip + "/24"]
+        local_v6 = self.app.local_ipv6s
         for sn in supernode_list:
             sn = sn.strip()
-            if sn:
+            if not sn:
+                continue
+            kind, host, port = parse_supernode(sn)
+            if kind == "v6":
+                if host.lower() in local_v6:
+                    # 开房者填的是自己的 IPv6（supernode 就在本机）→ 直连本机，无需转发器
+                    args += ["-l", "127.0.0.1:7654"]
+                    continue
+                lp = self._start_forwarder(host, port)
+                if lp is not None:
+                    self.app.append_log(tr("log_fw_started", v6=host, lp=lp))
+                    args += ["-l", "127.0.0.1:%d" % lp]
+                else:
+                    # 转发器不可用：直连本机端口碰运气（本机就是服务器时有效）
+                    args += ["-l", "127.0.0.1:7654"]
+            else:
                 args += ["-l", sn]
         cfg = self.app.cfg
         if cfg.get("use_multicast", True):
@@ -655,6 +766,17 @@ class EdgeSession:
             except Exception:
                 pass
             self.broadcast_proc = None
+        for p in self.fw_procs:
+            try:
+                # PyInstaller onefile 有父子进程，用 taskkill /T /F 整树杀干净
+                subprocess.run(
+                    ["taskkill", "/PID", str(p.pid), "/T", "/F"],
+                    capture_output=True, timeout=10,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except Exception:
+                pass
+        self.fw_procs = []
 
 
 # ----------------------------------------------------------------------------
@@ -665,6 +787,7 @@ class App:
         self.root = root
         self.cfg = load_config()
         self.session = EdgeSession(self)
+        self.local_ipv6s = get_local_ipv6s()
         self._connected = None
         self._log_lines = []
         self.chat_win = None

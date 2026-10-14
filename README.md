@@ -208,36 +208,73 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 
 ---
 
-## 九、手机当 supernode（随身联机中转，可选）
+## 九、IPv6 免端口转发直连（主推，无需公网 IPv4）
 
-没有固定公网 IP / 路由器改不了端口转发时，可用一台**安卓手机 + Termux** 跑 supernode，走移动数据的**公网 IPv6 直连**，完全绕开路由器。服务器端是纯 UDP 转发程序，**不需要 root**（需要 root 的是电脑客户端 edge 的虚拟网卡，跟服务器无关）。
+家用宽带没有公网 IPv4、路由器端口转发做不通时，用 **IPv6 直连** 绕开路由器：IPv6 下每台设备都有公网地址，**不需要任何端口转发**。只要开房电脑和朋友的网络都有 IPv6（国内宽带/手机流量基本都支持），直接走这条方案。
 
-### 1. 手机准备
+> 实测结论：n2n 的 edge/supernode 的 `-l` 地址解析**只认 IPv4**（连官方 v3.1.1 也一样），IPv6 只能通过"本地转发器"接入。本项目已内置两段转发器，客户端工具**全自动**处理，你只需填 IPv6 地址。
 
-1. 安装 **Termux**（建议 F-Droid 版）；
-2. 把 `server/deploy_supernode_android.sh` 传到手机（如存到 Download 目录），Termux 里执行 `termux-setup-storage` 授权后：
+### 1. 开房电脑（服务器）准备
+
+1. 管理员运行 `server/start_supernode.bat` 启动 supernode（UDP 7654，自动放行防火墙）；
+2. 再启动 IPv6 入口转发器（把公网 IPv6 的 7654 流量送进本机 supernode）：
    ```
-   cp /sdcard/Download/deploy_supernode_android.sh ~/
+   python server/udp6_forward.py
    ```
+   （隐藏窗口常驻即可；或打包成 exe 后台运行。）
+3. 查你的公网 IPv6 地址（发给朋友的就是这个）：
+   ```
+   ipconfig | findstr "IPv6"
+   ```
+   取 `2409:xxxx:...` 那行（形如 `2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186`）。IPv6 是运营商分配的，重拨/重启可能变化，变了就重新查。
 
-### 2. 一键部署
+### 2. 客户端填法（每台电脑都装工具）
+
+工具「服务器（公网 supernode）」栏直接填开房电脑的 IPv6 地址（**不带端口**，端口默认 7654）：
 
 ```
-bash ~/deploy_supernode_android.sh
+2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186
 ```
 
-脚本自动完成：装依赖 → 下载 lucktu arm64 静态包 → 后台启动 supernode（UDP 7654）→ 打印你的公网 IPv6。
+填完点「保存」→ 创建/加入房间即可。工具会自动：
+- 检测到这是 IPv6 → 自动启动本地转发器（`bin/udp6_client_forward.exe`，监听 127.0.0.1:7655 起）；
+- edge 连接本地转发器 → 经 IPv6 直连开房电脑的 supernode；
+- 关房时自动清理转发器。
 
-### 3. 朋友怎么连
+**房主自己**：工具识别到填的是本机 IPv6，会自动直连本机（`127.0.0.1:7654`），无需转发。
 
-把脚本最后打印的地址（形如 `[2409:xxxx]:7654`）发给朋友，填进客户端「服务器」栏即可（IPv4 / IPv6 均支持，多个地址用逗号分隔）。
+### 3. 验证
+
+edge 日志出现以下即注册成功（工具状态区会显示"已连接"）：
+
+```
+[OK] edge <<< ================ >>> supernode
+```
 
 ### 4. 注意事项
 
-- **要求参与各方的网络都支持 IPv6**（现在国内宽带、手机流量基本都有）；
-- 手机重连网络（飞行模式 / 重启 / 换 WiFi）后 IPv6 会变，需重新查一次（`curl -6 https://6.ipw.cn`）；
-- 建议插电长期运行；装 **Termux:Boot** 插件可实现开机自启（脚本末尾有说明）；
-- 这台手机 supernode 与家里电脑上的 supernode 二选一即可，客户端可同时填两个地址做冗余。
+- **参与各方的网络都要有 IPv6**：朋友家没有 IPv6 的话，可让他先用 `https://test-ipv6.com` 自查；
+- IPv6 地址会随网络重连变化，变了之后所有客户端都要改成新地址；
+- 房间内成员注册成功后，n2n 会尝试双方 UDP 直连（IPv6 无 NAT，基本都能打洞成功），后续流量不再经过 supernode。
+
+---
+
+## 十、手机当 supernode（可选，实测有坑）
+
+手机当 supernode 的**实测结论**：
+- **Termux 直装版 n2n 与 lucktu arm64 静态包均被安卓 seccomp 拦截**（进程启动即被杀：`Unknown signal 31` / 退出码 159），**不可用**；
+- **proot-distro Kali + `apt install n2n` 可以跑通**（`nohup supernode -p 7654 &` 可后台运行）；
+- 但手机连 WiFi 是二级路由时**拿不到公网 IPv6**，无法作为 IPv6 节点；手机需要处于有公网 IPv6 的网络（如移动数据）才行。
+
+因此**优先用第九章的电脑方案**；真要用手机当服务器时：
+
+```
+proot-distro login kali
+apt update && apt install -y n2n
+nohup supernode -p 7654 > /root/supernode.log 2>&1 &
+```
+
+注意：移植版 supernode **不支持 `-l` 管理端口参数**（会报 `invalid -l format`），只用 `-p 7654`；`deploy_supernode_android.sh` 为早期 Termux 版本，与实测可行路径不一致，仅供参考。
 
 ---
 
@@ -251,16 +288,21 @@ n2n-lan/
 ├── server/                      # 公网服务器端
 │   ├── deploy_supernode.sh      #   Linux 一键部署（编译 + systemd + 防火墙）
 │   ├── deploy_supernode_docker.sh
-│   ├── deploy_supernode_android.sh  #   安卓手机 Termux 一键部署（免 root，IPv6 直连）
+│   ├── deploy_supernode_android.sh  #   早期 Termux 一键部署（实测被安卓 seccomp 拦截，仅供参考）
 │   ├── start_supernode.bat      #   Windows 服务器启动
 │   ├── supernode.exe
+│   ├── supernode_official_v311.exe #  官方 v3.1.1 交叉编译版 supernode（备用）
+│   ├── udp6_forward.py          #   IPv6→IPv4 UDP 转发器（IPv6 免转发方案的服务端入口）
 │   ├── supernode.service        #   systemd 模板
 │   ├── visit_stats.py           #   官网访问统计服务源码（可选；或使用打包的 visit_stats.exe）
 │   └── start_stats.bat          #   Windows 访问统计启动（可选）
 └── client/                      # Windows 客户端（整目录拷贝分发）
     ├── start.bat                #   双击启动
     ├── n2n_room_manager.py      #   房间管理小工具
-    ├── bin/edge.exe             #   n2n v3.1.1 edge（lucktu 编译）
+    ├── udp6_client_forward.py   #   IPv4→IPv6 UDP 转发器源码（客户端侧，工具自动调用 exe）
+    ├── bin/edge.exe             #   n2n v3.1.1 edge（官方源码交叉编译，支持 -E 等全部参数）
+    ├── bin/udp6_client_forward.exe # IPv6 本地转发器（工具自动启动/停止）
+    ├── bin/supernode.exe        #   备用（本地开房调试用）
     ├── driver/tap-windows/      #   TAP 虚拟网卡驱动（tapinstall + 官方安装器）
     └── tools/WinIPBroadcast.exe #   局域网发现广播助手（可选，仓库不提供）
 ```
