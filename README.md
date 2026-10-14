@@ -208,6 +208,39 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 
 ---
 
+## 九、手机当 supernode（随身联机中转，可选）
+
+没有固定公网 IP / 路由器改不了端口转发时，可用一台**安卓手机 + Termux** 跑 supernode，走移动数据的**公网 IPv6 直连**，完全绕开路由器。服务器端是纯 UDP 转发程序，**不需要 root**（需要 root 的是电脑客户端 edge 的虚拟网卡，跟服务器无关）。
+
+### 1. 手机准备
+
+1. 安装 **Termux**（建议 F-Droid 版）；
+2. 把 `server/deploy_supernode_android.sh` 传到手机（如存到 Download 目录），Termux 里执行 `termux-setup-storage` 授权后：
+   ```
+   cp /sdcard/Download/deploy_supernode_android.sh ~/
+   ```
+
+### 2. 一键部署
+
+```
+bash ~/deploy_supernode_android.sh
+```
+
+脚本自动完成：装依赖 → 下载 lucktu arm64 静态包 → 后台启动 supernode（UDP 7654）→ 打印你的公网 IPv6。
+
+### 3. 朋友怎么连
+
+把脚本最后打印的地址（形如 `[2409:xxxx]:7654`）发给朋友，填进客户端「服务器」栏即可（IPv4 / IPv6 均支持，多个地址用逗号分隔）。
+
+### 4. 注意事项
+
+- **要求参与各方的网络都支持 IPv6**（现在国内宽带、手机流量基本都有）；
+- 手机重连网络（飞行模式 / 重启 / 换 WiFi）后 IPv6 会变，需重新查一次（`curl -6 https://6.ipw.cn`）；
+- 建议插电长期运行；装 **Termux:Boot** 插件可实现开机自启（脚本末尾有说明）；
+- 这台手机 supernode 与家里电脑上的 supernode 二选一即可，客户端可同时填两个地址做冗余。
+
+---
+
 ## 目录结构
 
 ```
@@ -218,6 +251,7 @@ n2n-lan/
 ├── server/                      # 公网服务器端
 │   ├── deploy_supernode.sh      #   Linux 一键部署（编译 + systemd + 防火墙）
 │   ├── deploy_supernode_docker.sh
+│   ├── deploy_supernode_android.sh  #   安卓手机 Termux 一键部署（免 root，IPv6 直连）
 │   ├── start_supernode.bat      #   Windows 服务器启动
 │   ├── supernode.exe
 │   ├── supernode.service        #   systemd 模板

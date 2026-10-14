@@ -229,6 +229,39 @@ End the `visit_stats.exe` process in Task Manager; to remove completely, delete 
 
 ---
 
+## 8. Phone as Supernode (mobile relay, optional)
+
+When you have no static public IP and cannot change router port forwarding, run the supernode on an **Android phone + Termux** and reach it directly over your mobile data's **public IPv6** — no router setup at all. The server side is a pure UDP relay; **no root is needed** (root is only needed for the PC client's virtual NIC, which is unrelated to the server).
+
+### 1. Phone prep
+
+1. Install **Termux** (F-Droid build recommended).
+2. Transfer `server/deploy_supernode_android.sh` to the phone (e.g. into the Download folder), then in Termux run `termux-setup-storage` and:
+   ```
+   cp /sdcard/Download/deploy_supernode_android.sh ~/
+   ```
+
+### 2. One-click deploy
+
+```
+bash ~/deploy_supernode_android.sh
+```
+
+The script installs dependencies, downloads the lucktu arm64 static build, starts supernode in the background (UDP 7654), and prints your public IPv6.
+
+### 3. How friends connect
+
+Send the printed address (like `[2409:xxxx]:7654`) to your friends and let them put it in the client's "Server" field (IPv4 and IPv6 both supported; separate multiple addresses with commas).
+
+### 4. Notes
+
+- **All participants' networks need IPv6** (almost all Chinese broadband and mobile data have it now).
+- After the phone reconnects (airplane mode / reboot / network switch) the IPv6 changes; re-check with `curl -6 https://6.ipw.cn`.
+- Keep it plugged in for 24/7 running; install the **Termux:Boot** add-on for autostart (see the script's tail).
+- This phone supernode and the home PC supernode are alternatives; the client can hold both addresses for redundancy.
+
+---
+
 ## Directory Structure
 
 ```
@@ -242,6 +275,7 @@ n2n-lan/
 │   ├── start_supernode.bat      #   Windows server launcher
 │   ├── supernode.exe
 │   ├── supernode.service        #   systemd template
+│   ├── deploy_supernode_android.sh  #   one-click deploy on Android/Termux (no root, IPv6)
 │   ├── visit_stats.py           #   website visit stats source (optional; or use visit_stats.exe)
 │   └── start_stats.bat          #   Windows stats launcher (optional)
 └── client/                      # Windows client (copy the whole folder for distribution)

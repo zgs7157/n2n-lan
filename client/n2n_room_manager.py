@@ -946,9 +946,12 @@ class App:
         if not sn:
             messagebox.showerror(tr("no_server"), tr("no_server_msg"))
             return
-        host = sn.split(",")[0].strip()
-        if ":" in host:
-            host = host.split(":")[0]
+        entry = sn.split(",")[0].strip()
+        # 兼容 IPv6 格式 [2409:xxxx]:7654 与 IPv4 格式 1.2.3.4:7654
+        if entry.startswith("["):
+            host = entry[1:].split("]")[0]
+        else:
+            host = entry.split(":")[0]
         if not host:
             messagebox.showerror(tr("no_server"), tr("no_server_msg"))
             return
