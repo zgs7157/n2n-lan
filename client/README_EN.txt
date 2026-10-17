@@ -9,9 +9,9 @@ English quick start · 中文见「使用说明.txt」
     switch language under "Tools & Settings -> Language".)
 2. At the top, enter the server address given by the host, then click Save:
    - IPv6 (recommended, no port forwarding needed): paste the IPv6 address as-is,
-     e.g. 2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186  (no port; a local forwarder is
+     e.g. 2409:abcd:1234:…::xxxx  (no port; a local forwarder is
      started automatically for IPv6);
-   - IPv4/domain: host:port, e.g. 39.162.81.68:7654.
+   - IPv4/domain: host:port, e.g. 1.2.3.4:7654.
 3. Host: click "Create Room (I'm host)":
    - tick "Password": a 6-digit room password is generated (send it SEPARATELY;
      wrong password cannot join);

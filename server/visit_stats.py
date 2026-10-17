@@ -35,7 +35,7 @@ else:
 CONF_PATH = os.path.join(BASE_DIR, "stats_config.json")
 DB_PATH = os.path.join(BASE_DIR, "visits.db")
 
-DEFAULT_CONFIG = {"admin_key": "n2n2026", "port": 8088}
+DEFAULT_CONFIG = {"admin_key": "CHANGE_ME_n2n-admin", "port": 8088}
 
 # 1x1 透明 GIF（打点响应体）
 PIXEL = (b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff"

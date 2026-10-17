@@ -1272,7 +1272,7 @@ def selftest():
     print("密码不同则密钥不同:", derive_key("Ab3CdEfGhJ", "123456") != derive_key("Ab3CdEfGhJ", "654321"))
     print("IP 建议(10.88.0):", suggest_ip("10.88.0", DEFAULT_CONFIG))
     print("IP 校验 10.9.0.3:", validate_ip("10.9.0.3"), "| 10.9.1.3:", validate_ip("10.9.1.3"))
-    print("手机进房链接:", make_join_link("39.162.81.68", 25565, "mc-pixel-creeper-1234"))
+    print("手机进房链接:", make_join_link("1.2.3.4", 25565, "mc-pixel-creeper-1234"))
     print("聊天广播地址(10.88.0.2):", chat_broadcast_addr("10.88.0.2"), "| 非法:", chat_broadcast_addr("192.168.1.4"))
     print("== 自检完成 ==")
 

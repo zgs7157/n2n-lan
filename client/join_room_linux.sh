@@ -7,8 +7,8 @@
 #   sudo bash join_room_linux.sh <房间码> [房间密码] <服务器IP:端口>
 #
 # 示例:
-#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 482913 39.162.81.68:7654
-#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 39.162.81.68:7654   # 免密房
+#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 482913 你的服务器IP:7654
+#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 你的服务器IP:7654   # 免密房
 #
 # 前置条件:
 #   - n2n v3 的 edge 命令（与服务器同为 v3 协议，2.x 不兼容）
@@ -29,8 +29,8 @@ fi
 
 if [ -z "$CODE" ] || [ -z "$SN_ARG" ]; then
     echo "用法: sudo bash $0 <房间码> [房间密码] <服务器IP:端口>"
-    echo "示例: sudo bash $0 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 482913 39.162.81.68:7654"
-    echo "       sudo bash $0 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 39.162.81.68:7654   # 免密房"
+    echo "示例: sudo bash $0 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 482913 你的服务器IP:7654"
+    echo "       sudo bash $0 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 你的服务器IP:7654   # 免密房"
     exit 1
 fi
 

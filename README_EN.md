@@ -165,7 +165,7 @@ the private IP** — you need one of:
 2. Find "Port Forwarding / Virtual Server / Port Mapping", add a rule:
    - Protocol: **UDP**; External port: **7654**; Internal IP: **192.168.1.4**; Internal port: **7654**
 3. After it takes effect, every client (including you) sets the supernode to
-   **your public IPv4:7654** (check it at `https://myip.ipip.net`, e.g. `39.162.81.68:7654`).
+   **your public IPv4:7654** (check it at `https://myip.ipip.net`, e.g. `1.2.3.4:7654`).
 4. Home public IPs may change on re-dial; for long-term use set up DDNS on the router.
 - The Windows firewall rule is added automatically by `start_supernode.bat` (UDP 7654 in).
 
@@ -177,7 +177,7 @@ Use a community-maintained public n2n supernode (e.g. Bugxia/EasyN2N nodes bj/cd
 
 ### Option 3: Mobile friends join directly (no install; recommended for phones)
 n2n cannot run rootless on Android/iOS, so phone friends should connect straight to your MC server:
-1. In the desktop tool click **Copy Join Link** and send the link to your friend (it already carries your public IP and room name, e.g. `https://zgs7157.github.io/n2n-lan/join.html?ip=39.162.81.68&port=25565&room=...`).
+1. In the desktop tool click **Copy Join Link** and send the link to your friend (it already carries your public IP and room name, e.g. `https://zgs7157.github.io/n2n-lan/join.html?ip=YOUR_PUBLIC_IP&port=25565&room=...`).
 2. Your friend opens the link on their phone, sees the server address and taps **Copy Server Address**.
 3. Open FCL → Multiplayer → Add Server / Direct Connect → paste the address → Join Server.
 - Prerequisite: the router must also forward **TCP 25565 → 192.168.1.4** (a different port from n2n's UDP 7654 — forward both);
@@ -214,14 +214,14 @@ Put `server/visit_stats.exe` and `server/start_stats.bat` in the same folder and
 ### 3. Admin page (either way works)
 
 - **IPv4**: `http://YOUR_PUBLIC_IP:8088/admin?key=YOUR_ADMIN_KEY` (requires router port forwarding for TCP 8088)
-- **IPv6 (recommended, no forwarding needed)**: `http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/admin?key=YOUR_ADMIN_KEY`
+- **IPv6 (recommended, no forwarding needed)**: `http://[YOUR_PUBLIC_IPV6]:8088/admin?key=YOUR_ADMIN_KEY`
   — works directly when your broadband has IPv6 (every device has a public IPv6 address; no router setup). The IPv6 address can change with your ISP, so update the website tracking URLs accordingly.
 
 Shows: today PV/UV, total PV/UV, last 7 days, latest 30 visits (time / IP / page / UA).
 
 ### 4. Website tracking
 
-The website already contains the tracking script and the Footer visitor badge (`docs/index.html`), sending to both IPv4 and IPv6: `http://39.162.81.68:8088` and `http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088` — whichever is reachable wins. **If your IP changes**, update the corresponding URLs in the site (wrap IPv6 addresses in square brackets `[]`), then push (Pages redeploys automatically).
+The tracking script lives at the bottom of `docs/index.html` and is **disabled by default** (a commented template is included). To enable it, point `/hit` at your own stats service — **never** put the admin URL with the key (`admin?key=...`) in the public site; the `/hit` endpoint needs no key. Wrap IPv6 addresses in square brackets `[]`, then push (Pages redeploys automatically).
 
 ### 5. Stop / remove
 

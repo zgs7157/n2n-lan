@@ -10,7 +10,7 @@ if exist visit_stats.exe (
   echo.
   start "" /b visit_stats.exe
   echo Stats service started in background. Default port 8088.
-  echo Admin page: http://YOUR_PUBLIC_IP:8088/admin?key=n2n2026
+  echo Admin page: http://YOUR_PUBLIC_IP:8088/admin?key=YOUR_ADMIN_KEY
   echo Stop it: Task Manager - end process "visit_stats.exe"
 ) else (
   echo visit_stats.exe not found. Put this file together with visit_stats.exe.

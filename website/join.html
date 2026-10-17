@@ -115,7 +115,7 @@
   <!-- 无参数时：输入地址 -->
   <div class="input-mode" id="inputMode">
     <label>房主填一次，生成进房链接 / 二维码发给朋友</label>
-    <input id="ipInput" type="text" inputmode="url" placeholder="服务器地址，如 39.162.81.68:25565" autocomplete="off">
+    <input id="ipInput" type="text" inputmode="url" placeholder="服务器地址，如 1.2.3.4:25565" autocomplete="off">
     <button class="btn primary" id="genBtn">生成进房卡片</button>
   </div>
 
@@ -180,7 +180,7 @@
       var raw = ipInput.value.trim();
       if (!raw) { showToast('请先填写服务器地址'); return; }
       var m = raw.match(/^([^:]+)(?::(\d+))?$/);
-      if (!m) { showToast('地址格式应为 IP:端口，如 39.162.81.68:25565'); return; }
+      if (!m) { showToast('地址格式应为 IP:端口，如 1.2.3.4:25565'); return; }
       ip = m[1];
       port = m[2] || '25565';
       build();

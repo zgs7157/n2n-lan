@@ -7,7 +7,7 @@ udp6_client_forward.py - n2n-lan IPv4 -> IPv6 UDP forwarder (客户端侧)
      所以让 edge 连本机 127.0.0.1，本转发器负责 IPv6 出口。
 
 运行：python udp6_client_forward.py <服务器IPv6地址> [端口]
-     例：python udp6_client_forward.py 2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186
+     例：python udp6_client_forward.py 2409:abcd:1234:…::xxxx
 依赖：仅 Python 标准库。
 """
 import socket

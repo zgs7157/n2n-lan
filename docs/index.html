@@ -250,7 +250,29 @@
     <div class="statbar">
       <div class="stat"><b data-i18n="stat1-b">免装 Python</b><span data-i18n="stat1-s">14.5MB 单文件 exe，双击即用</span></div>
       <div class="stat"><b data-i18n="stat2-b">密码房 / 免密房</b><span data-i18n="stat2-s">6 位房间密码，密码错误进不来</span></div>
-      <div class="stat"><b data-i18n="stat3-b">P2P 直连</b><span data-i18n="stat3-s">服务器只做登记打洞，不中转流量</span></div>
+      <div class="stat"><b data-i18n="stat3-b">P2P 直连</b><span data-i18n="stat3-s">平时不碰游戏流量，打洞失败自动中转兜底</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 身份路径（我是房主 / 我是好友） ===== -->
+<section id="who" style="padding-top:8px">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 data-i18n="who-title">你是哪一边？</h2>
+      <p data-i18n="who-sub">点你对应的身份照着走就行——不用先搞懂 supernode 和打洞。</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h3 data-i18n="who-host-t">我是房主（我开房间）</h3>
+        <p data-i18n="who-host-p">准备好一台有公网的服务器 → 下载客户端 → 创建房间 → 把房间码发给朋友。</p>
+        <a class="btn primary" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener" data-i18n="who-host-btn">下载 Windows 客户端</a>
+      </div>
+      <div class="card">
+        <h3 data-i18n="who-friend-t">我是好友（进朋友的房间）</h3>
+        <p data-i18n="who-friend-p">只需要朋友发你的一个房间码：下载客户端 → 粘贴房间码 → 进 MC 联机。</p>
+        <a class="btn ghost" href="https://github.com/zgs7157/n2n-lan/releases" target="_blank" rel="noopener" data-i18n="who-friend-btn">下载 Windows 客户端</a>
+      </div>
     </div>
   </div>
 </section>
@@ -309,7 +331,7 @@
         <svg viewBox="0 0 460 300" role="img" aria-label="同一房间 = 同一 community 虚拟局域网">
           <rect class="node-sn" x="160" y="14" width="140" height="50" rx="10"/>
           <text class="cap-sn" x="230" y="34" text-anchor="middle" data-i18n="how-sn">supernode</text>
-          <text class="cap-sub" x="230" y="52" text-anchor="middle" fill="#8FA3CC" data-i18n="how-sn-sub">只登记 · 只打洞</text>
+          <text class="cap-sub" x="230" y="52" text-anchor="middle" fill="#8FA3CC" data-i18n="how-sn-sub">登记打洞 · 失败中转兜底</text>
           <rect class="node-host" x="10" y="200" width="130" height="56" rx="10"/>
           <text class="cap" x="75" y="222" text-anchor="middle" data-i18n="how-host">房主 10.x.0.1</text>
           <text class="cap-sub" x="75" y="240" text-anchor="middle" data-i18n="how-host-sub">community 相同</text>
@@ -325,7 +347,7 @@
       <ol>
         <li>
           <b data-i18n="how-li1-b">服务器只做「前台」</b>
-          <p data-i18n="how-li1-p">部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行），它只登记房间成员、帮忙打通 NAT，不碰你的游戏流量。</p>
+          <p data-i18n="how-li1-p">部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行）：它登记房间成员、帮忙打通 NAT；平时不碰游戏流量，打洞失败时才经它中转。</p>
         </li>
         <li>
           <b data-i18n="how-li2-b">房间码 = 房间的身份</b>
@@ -421,7 +443,6 @@
 <footer>
   <div class="wrap foot">
     <div class="license" data-i18n="foot-license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
-    <img src="http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/badge.svg" alt="访问量" style="height:20px;vertical-align:middle">
     <div class="links">
       <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="foot-gh">GitHub</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot-doc">文档</a>
@@ -432,16 +453,11 @@
 
 <script>
 (function(){
-  // 访问统计打点（自建服务，图片方式兼容 HTTPS→HTTP；IPv4 与 IPv6 双发，谁通谁记录）
-  // 地址变更：更新下面两处 IP（IPv6 公网直连，无需路由器转发）
-  try {
-    var _st = new Image();
-    _st.src = "http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/hit?page=home&r=" + Date.now();
-  } catch(e){}
-  try {
-    var _st4 = new Image();
-    _st4.src = "http://39.162.81.68:8088/hit?page=home&r=" + Date.now();
-  } catch(e){}
+  // 访问统计打点已默认关闭：启用需自建 server/visit_stats.py，并把地址写在这里——
+  // 注意不要把含密钥的后台地址（admin?key=...）写进本文件，打点端点 /hit 本就无需密钥。
+  // 示例（取消注释并改成你自己的统计服务地址后生效）：
+  //   var _st = new Image();
+  //   _st.src = "http://你的统计服务地址/hit?page=home&r=" + Date.now();
 
   var I18N = {
     zh: {
@@ -455,7 +471,10 @@
       "topo-sn":"supernode","topo-sn-sub":"公网 · UDP 7654","topo-host":"房主电脑","topo-host-ip":"10.x.0.1","topo-friend":"好友电脑","topo-friend-ip":"10.x.0.2","topo-reg":"登记 + NAT 打洞","topo-p2p":"打洞成功 → P2P 直连（失败自动走服务器中转）",
       "stat1-b":"免装 Python","stat1-s":"14.5MB 单文件 exe，双击即用",
       "stat2-b":"密码房 / 免密房","stat2-s":"6 位房间密码，密码错误进不来",
-      "stat3-b":"P2P 直连","stat3-s":"服务器只做登记打洞，不中转流量",
+      "stat3-b":"P2P 直连","stat3-s":"平时不碰游戏流量，打洞失败自动中转兜底",
+      "who-title":"你是哪一边？","who-sub":"点你对应的身份照着走就行——不用先搞懂 supernode 和打洞。",
+      "who-host-t":"我是房主（我开房间）","who-host-p":"准备好一台有公网的服务器 → 下载客户端 → 创建房间 → 把房间码发给朋友。","who-host-btn":"下载 Windows 客户端",
+      "who-friend-t":"我是好友（进朋友的房间）","who-friend-p":"只需要朋友发你的一个房间码：下载客户端 → 粘贴房间码 → 进 MC 联机。","who-friend-btn":"下载 Windows 客户端",
       "feat-title":"开黑房的正确打开方式","feat-sub":"不为联机折腾公网 IP、端口映射和繁琐配置——一个房间码，朋友粘贴即可进房。",
       "f1-t":"朋友不用装 Python","f1-p":"PyInstaller 打包成单文件 exe，内含运行环境；把客户端 zip 发给朋友，解压双击 start.bat 就能进房。",
       "f2-t":"密码房 / 免密房","f2-p":"房主可勾选「带密码」：自动生成 6 位数字密码并参与加密密钥派生——密码错误 = 密钥不同 = 进不来，房间码泄露也没用；不勾就是免密房。",
@@ -464,8 +483,8 @@
       "f5-t":"Linux 也能进同一个房","f5-p":"附一键进房脚本（join_room_linux.sh），Windows 房主 + Linux 好友同房间互通；下载预编译 n2n v3 edge 即可。",
       "f6-t":"开源可审计","f6-p":"房间管理工具与部署脚本采用 MIT 协议，n2n 引擎 GPLv3、TAP 驱动 GPLv2，来源与许可全部在仓库里写清，可自行复查。",
       "how-title":"它是怎么把两台电脑变成同一个房间的","how-sub":"一个公网服务器做「房间前台」，登记谁在哪个房间、帮双方打通 NAT——之后你们就直接对话。",
-      "how-sn":"supernode","how-sn-sub":"只登记 · 只打洞","how-host":"房主 10.x.0.1","how-host-sub":"community 相同","how-friend":"好友 10.x.0.2","how-friend-sub":"community 相同","how-bottom":"同一房间 = 同一虚拟局域网：ping 得通、互见 MC 局域网世界",
-      "how-li1-b":"服务器只做「前台」","how-li1-p":"部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行），它只登记房间成员、帮忙打通 NAT，不碰你的游戏流量。",
+      "how-sn":"supernode","how-sn-sub":"登记打洞 · 失败中转兜底","how-host":"房主 10.x.0.1","how-host-sub":"community 相同","how-friend":"好友 10.x.0.2","how-friend-sub":"community 相同","how-bottom":"同一房间 = 同一虚拟局域网：ping 得通、互见 MC 局域网世界",
+      "how-li1-b":"服务器只做「前台」","how-li1-p":"部署一个公网 supernode（Linux 一键脚本 / Windows bat / Docker 都行）：它登记房间成员、帮忙打通 NAT；平时不碰游戏流量，打洞失败时才经它中转。",
       "how-li2-b":"房间码 = 房间的身份","how-li2-p":"房主创建房间自动生成房间码（community@网段#密钥），密钥即传输加密口令；带密码房间再叠加 6 位数字密码。",
       "how-li3-b":"进房后 P2P 直连","how-li3-p":"双方都拿到虚拟 IP（10.x.0.x），打洞成功就直连互访；打洞失败自动降级为服务器中转，房间依然可用。",
       "start-title":"三步开黑","start-sub":"从部署到进游戏，全程大约十分钟。完整的服务器部署与排障说明在仓库 README 里。",
@@ -493,7 +512,10 @@
       "topo-sn":"supernode","topo-sn-sub":"Public · UDP 7654","topo-host":"Host PC","topo-host-ip":"10.x.0.1","topo-friend":"Friend PC","topo-friend-ip":"10.x.0.2","topo-reg":"Register + NAT hole-punch","topo-p2p":"P2P after hole-punch (server relay fallback)",
       "stat1-b":"No Python needed","stat1-s":"14.5MB single-file exe, double-click to run",
       "stat2-b":"Password / open rooms","stat2-s":"6-digit room password; wrong password can't join",
-      "stat3-b":"Direct P2P","stat3-s":"Server only registers & hole-punches, never relays traffic",
+      "stat3-b":"Direct P2P","stat3-s":"No game traffic by default; server relays only if punching fails",
+      "who-title":"Which side are you on?","who-sub":"Pick your role and follow the steps — no need to understand supernodes or hole-punching first.",
+      "who-host-t":"I'm the host","who-host-p":"Set up a server with a public IP → download the client → create a room → send the room code to friends.","who-host-btn":"Download Windows client",
+      "who-friend-t":"I'm joining a friend","who-friend-p":"All you need is the room code from your friend: download the client → paste the code → play.","who-friend-btn":"Download Windows client",
       "feat-title":"The right way to set up a co-op room","feat-sub":"No public IP, port-forwarding or config hunting — share one room code, friends paste it and join.",
       "f1-t":"Friends don't need Python","f1-p":"Packaged as a single-file exe with the runtime included. Send the client zip to a friend; they unzip and double-click start.bat to join.",
       "f2-t":"Password / open rooms","f2-p":"Host can tick \"Password\": a 6-digit password is generated and mixed into the encryption key — wrong password = different key = can't join, even if the room code leaks. Untick it for an open room.",
@@ -502,8 +524,8 @@
       "f5-t":"Linux joins the same room","f5-p":"One-click join script (join_room_linux.sh) included. A Windows host and a Linux friend play in the same room; just grab the prebuilt n2n v3 edge.",
       "f6-t":"Open source & auditable","f6-p":"Room manager and deploy scripts are MIT; n2n engine is GPLv3 and the TAP driver GPLv2. Licenses and sources are all documented in the repo.",
       "how-title":"How two PCs become one room","how-sub":"One public server acts as the \"room front desk\" — it registers who is in which room and helps punch through NAT. After that, you talk directly.",
-      "how-sn":"supernode","how-sn-sub":"register · punch only","how-host":"Host 10.x.0.1","how-host-sub":"same community","how-friend":"Friend 10.x.0.2","how-friend-sub":"same community","how-bottom":"Same room = same virtual LAN: ping works, MC LAN worlds visible",
-      "how-li1-b":"The server is only the \"front desk\"","how-li1-p":"Deploy a public supernode (Linux one-click script / Windows bat / Docker). It only registers members and punches NAT — it never touches your game traffic.",
+      "how-sn":"supernode","how-sn-sub":"registers · relay fallback","how-host":"Host 10.x.0.1","how-host-sub":"same community","how-friend":"Friend 10.x.0.2","how-friend-sub":"same community","how-bottom":"Same room = same virtual LAN: ping works, MC LAN worlds visible",
+      "how-li1-b":"The server is only the \"front desk\"","how-li1-p":"Deploy a public supernode (Linux one-click script / Windows bat / Docker). It registers members and punches NAT. Game traffic never flows through it — unless hole-punching fails, when it relays as a fallback.",
       "how-li2-b":"Room code = room identity","how-li2-p":"The host creates a room and gets a code (community@subnet#key). The key is the transport encryption passphrase; password rooms add a 6-digit password on top.",
       "how-li3-b":"Direct P2P after joining","how-li3-p":"Everyone gets a virtual IP (10.x.0.x). Once punched through, peers connect directly; on failure it automatically degrades to server relay and the room keeps working.",
       "start-title":"Start playing in 3 steps","start-sub":"From deploy to in-game in about 10 minutes. Full server setup and troubleshooting live in the repo README.",

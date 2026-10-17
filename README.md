@@ -94,8 +94,8 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 2. 下载脚本并执行（带密码房 / 免密房）：
    ```bash
    wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
-   sudo bash join_room_linux.sh '房间码' 482913 39.162.81.68:7654
-   sudo bash join_room_linux.sh '房间码' 39.162.81.68:7654
+   sudo bash join_room_linux.sh '房间码' 482913 你的服务器IP:7654
+   sudo bash join_room_linux.sh '房间码' 你的服务器IP:7654
    ```
    （raw.githubusercontent 直连不通时，给 wget 加 ghproxy 前缀：
    `https://ghproxy.net/https://raw.githubusercontent.com/...`）
@@ -144,7 +144,7 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 1. 浏览器打开路由器管理页（本机网关，通常是 `192.168.1.1`），登录（账号密码见路由器/光猫背面标签）。
 2. 找到「端口转发 / 虚拟服务器 / 端口映射」，新增规则：
    - 协议：**UDP**；外部端口：**7654**；内网 IP：**192.168.1.4**；内部端口：**7654**
-3. 保存生效后，所有客户端（含你）把 supernode 填成 **你的公网 IPv4:7654**（用 `https://myip.ipip.net` 查询当前值，如 `39.162.81.68:7654`）。
+3. 保存生效后，所有客户端（含你）把 supernode 填成 **你的公网 IPv4:7654**（用 `https://myip.ipip.net` 查询当前值，如 `1.2.3.4:7654`）。
 4. 注意：家庭宽带公网 IP 可能随重拨变化，长期使用建议在路由器里配置 DDNS 域名，或用域名代替 IP。
 - 本机 Windows 防火墙放行由 `start_supernode.bat` 自动完成（UDP 7654 入站）。
 
@@ -156,7 +156,7 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 
 ### 方式三：手机好友进房（免安装，推荐给手机党）
 手机端（iOS/安卓）无法免 root 跑 n2n，朋友手机建议直接连你开的 MC 服务器：
-1. 桌面工具点「复制进房链接」，把链接发给好友（链接自动带上公网 IP 与房间名参数，如 `https://zgs7157.github.io/n2n-lan/join.html?ip=39.162.81.68&port=25565&room=...`）；
+1. 桌面工具点「复制进房链接」，把链接发给好友（链接自动带上公网 IP 与房间名参数，如 `https://zgs7157.github.io/n2n-lan/join.html?ip=你的公网IP&port=25565&room=...`）；
 2. 好友手机点开链接，看到房间地址后点「复制服务器地址」；
 3. 打开 FCL → 多人游戏 → 添加服务器/直接连接 → 粘贴地址 → 加入服务器。
 - 前提：路由器还要转发 **TCP 25565 → 192.168.1.4**（与 n2n 的 UDP 7654 是两个端口，都要转发）；
@@ -193,14 +193,14 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 ### 3. 后台地址（两种方式任选）
 
 - **IPv4**：`http://你的公网IP:8088/admin?key=你的后台密码`（需路由器转发 TCP 8088）
-- **IPv6（推荐，免转发）**：`http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088/admin?key=你的后台密码`
+- **IPv6（推荐，免转发）**：`http://[你的公网IPv6]:8088/admin?key=你的后台密码`
   —— 宽带支持 IPv6 时直接可用，**不需要路由器端口转发**（IPv6 每台设备都有公网地址）。IPv6 地址会随运营商变动，变化后需同步更新官网打点与徽章地址。
 
 页面显示：今日 PV/UV、累计 PV/UV、最近 7 天、最近 30 条访问记录（时间/IP/页面/UA）。
 
 ### 4. 官网打点
 
-官网已内置打点脚本与 Footer 访客徽章（`docs/index.html`），IPv4 / IPv6 双发：当前指向 `http://39.162.81.68:8088` 与 `http://[2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186]:8088`，谁通谁记录。**IP 变化时**，需同步修改官网中对应地址（IPv6 地址用方括号 `[]` 包裹），推送后 Pages 自动重新部署。
+官网打点脚本位于 `docs/index.html` 底部，**默认关闭**（源码里已留注释模板）。启用时把 `/hit` 地址改成你自己的统计服务地址即可——注意**不要**把含密钥的后台地址（`admin?key=...`）写进公开网页；打点端点 `/hit` 本身无需密钥。IPv6 地址用方括号 `[]` 包裹，推送后 Pages 自动重新部署。
 
 ### 5. 关闭统计
 
@@ -226,14 +226,14 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
    ```
    ipconfig | findstr "IPv6"
    ```
-   取 `2409:xxxx:...` 那行（形如 `2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186`）。IPv6 是运营商分配的，重拨/重启可能变化，变了就重新查。
+   取 `2409:xxxx:...` 那行（形如 `2409:abcd:1234:…:xxxx`）。IPv6 是运营商分配的，重拨/重启可能变化，变了就重新查。
 
 ### 2. 客户端填法（每台电脑都装工具）
 
 工具「服务器（公网 supernode）」栏直接填开房电脑的 IPv6 地址（**不带端口**，端口默认 7654）：
 
 ```
-2409:8a48:9d5:81a0:e203:3a0e:8d3d:4186
+2409:abcd:1234:5678::1a2b   ← 换成你查到的自己的 IPv6
 ```
 
 填完点「保存」→ 创建/加入房间即可。工具会自动：
