@@ -117,6 +117,37 @@ use `client/join_room_linux.sh`:
 
 > The script creates a virtual NIC `n2n0` and needs root; clean up as printed on exit.
 
+### macOS client (when a friend uses a Mac)
+
+**Way A (easiest, zero-install, recommended)**: the Mac Minecraft Java edition connects
+straight to the host's public IP: Multiplayer → Direct Connect / Add Server →
+`your-public-ip:25565` (requires TCP 25565 forwarded on the host router).
+No n2n, no driver, no software needed on the Mac — same principle as mobile friends.
+
+**Way B (join the n2n room, same experience as the Windows client)**:
+use `client/install_mac.sh` + `client/start_mac.sh`:
+1. **Build the n2n edge** (one-click script; works on both Intel and Apple Silicon):
+   ```bash
+   cd client
+   bash install_mac.sh      # Homebrew → build deps → compile n2n 3.1.1 → copy edge to bin/
+   ```
+   Alternatively `sudo port install n2n` (MacPorts).
+2. **Install the TUN/TAP driver** (n2n needs a virtual NIC):
+   - **Intel Mac**: `brew install --cask tuntap`, then allow the kernel extension in
+     System Settings → Privacy & Security, reboot.
+   - **Apple Silicon (M-series)**: the official tuntap kernel extension is restricted
+     (needs lowered security policy) — a known n2n pain point on M-series.
+     If you can't install it, just use **Way A** (direct connect) — gameplay unaffected.
+3. **Launch the client**:
+   ```bash
+   bash start_mac.sh        # environment self-check, then the GUI (same as Windows)
+   ```
+4. Minecraft Multiplayer → Direct Connect → `10.x.0.1:25565`.
+
+> Note: the Mac client runs from source (Python + tkinter) and needs Python 3
+> (`brew install python-tk`). To package it as a .app, see the comments at the
+> end of `client/make_mac_pkg.sh`.
+
 ### Room chat (desktop, built into the Windows client)
 
 After creating/joining a room click **Room Chat** — **no extra server needed**:
@@ -278,13 +309,18 @@ n2n-lan/
 │   ├── deploy_supernode_android.sh  #   one-click deploy on Android/Termux (no root, IPv6)
 │   ├── visit_stats.py           #   website visit stats source (optional; or use visit_stats.exe)
 │   └── start_stats.bat          #   Windows stats launcher (optional)
-└── client/                      # Windows client (copy the whole folder for distribution)
-    ├── start.bat                #   double-click to launch
-    ├── n2n_room_manager.py      #   Room Manager (bilingual UI)
+└── client/                      # client (Windows: copy the whole folder for distribution; macOS/Linux: run from source)
+    ├── start.bat                #   Windows double-click launcher
+    ├── start_mac.sh             #   macOS launcher (self-check + install guidance)
+    ├── install_mac.sh           #   macOS one-click setup (build edge + deps + driver guidance)
+    ├── make_mac_pkg.sh          #   macOS client folder packager (optional)
+    ├── n2n_room_manager.py      #   Room Manager (cross-platform: Windows/macOS/Linux, bilingual UI)
+    ├── udp6_client_forward.py   #   IPv4→IPv6 UDP forwarder source (Windows calls the exe; other platforms call this)
     ├── join_room_linux.sh       #   Linux one-click room join
-    ├── bin/edge.exe             #   n2n v3.1.1 edge (lucktu build)
-    ├── driver/tap-windows/      #   TAP driver (tapinstall + official installer)
-    └── tools/WinIPBroadcast.exe #   LAN discovery broadcast helper (optional, not in repo)
+    ├── bin/edge.exe             #   Windows: n2n v3.1.1 edge (lucktu build)
+    ├── bin/edge                 #   macOS/Linux: edge (built by install_mac.sh)
+    ├── driver/tap-windows/      #   Windows: TAP driver (tapinstall + official installer)
+    └── tools/WinIPBroadcast.exe #   Windows: LAN discovery broadcast helper (optional, not in repo)
 ```
 
 ## Open Source & Building

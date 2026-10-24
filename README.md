@@ -103,6 +103,32 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
 
 > 注意：n2n 客户端必须为 **v3**（与服务器协议一致）。脚本会创建虚拟网卡 `n2n0`，需要 root；退出房间按脚本结尾提示清理。
 
+### macOS 客户端（朋友用 Mac 时）
+
+**方式 A（最简单，零安装，推荐）**：Mac 上的 MC Java 版直接连房主公网：
+多人游戏 → 直接连接/添加服务器 → `你的公网IP:25565`（需房主路由器已转发 TCP 25565）。
+Mac 完全不用装 n2n、不用装驱动、不用装任何软件——和手机好友进房是同一套原理。
+
+**方式 B（加入 n2n 房间，体验与 Windows 客户端一致）**：使用 `client/install_mac.sh` + `client/start_mac.sh`：
+1. **编译 n2n edge**（一键脚本自动完成，Intel 与 Apple 芯片通用）：
+   ```bash
+   cd client
+   bash install_mac.sh      # 自动：检查 Homebrew → 装编译依赖 → 编译 n2n 3.1.1 → 拷 edge 到 bin/
+   ```
+   装好后 `bin/edge` 已就绪。若不想编译，也可 `sudo port install n2n`（MacPorts）。
+2. **安装虚拟网卡驱动**（n2n 需要 TUN/TAP 接口）：
+   - **Intel Mac**：`brew install --cask tuntap`，然后到「系统设置 → 隐私与安全性」允许内核扩展，重启生效；
+   - **Apple 芯片（M 系列）**：官方 tuntap 内核扩展安装受限（需降低安全策略），这是 n2n 在 M 芯片上的已知难点；
+     装不上的话直接走**方式 A**（好友直连）即可，完全不影响联机。
+3. **启动客户端**：
+   ```bash
+   bash start_mac.sh        # 自检环境后打开图形界面，操作与 Windows 版一致
+   ```
+4. MC 多人游戏 → 直接连接 → 填 `10.x.0.1:25565`。
+
+> 说明：Mac 客户端是**源码版**（Python + tkinter），需要本机 Python 3（`brew install python-tk`）。
+> 打包成 .app 的步骤见 `client/make_mac_pkg.sh` 末尾注释。
+
 ### 房间聊天（电脑端，Windows 客户端内置）
 
 创建/加入房间后点「房间聊天」即可使用，**不需要额外服务器**：
@@ -296,15 +322,20 @@ n2n-lan/
 │   ├── supernode.service        #   systemd 模板
 │   ├── visit_stats.py           #   官网访问统计服务源码（可选；或使用打包的 visit_stats.exe）
 │   └── start_stats.bat          #   Windows 访问统计启动（可选）
-└── client/                      # Windows 客户端（整目录拷贝分发）
-    ├── start.bat                #   双击启动
-    ├── n2n_room_manager.py      #   房间管理小工具
-    ├── udp6_client_forward.py   #   IPv4→IPv6 UDP 转发器源码（客户端侧，工具自动调用 exe）
-    ├── bin/edge.exe             #   n2n v3.1.1 edge（官方源码交叉编译，支持 -E 等全部参数）
-    ├── bin/udp6_client_forward.exe # IPv6 本地转发器（工具自动启动/停止）
+└── client/                      # 客户端（Windows 整目录拷贝分发；macOS/Linux 源码运行）
+    ├── start.bat                #   Windows 双击启动
+    ├── start_mac.sh             #   macOS 启动（自检 + 引导安装）
+    ├── install_mac.sh           #   macOS 一键部署（编译 edge + 装依赖 + 驱动指引）
+    ├── make_mac_pkg.sh          #   macOS 客户端目录打包（可选）
+    ├── n2n_room_manager.py      #   房间管理小工具（跨平台：Windows/macOS/Linux）
+    ├── udp6_client_forward.py   #   IPv4→IPv6 UDP 转发器源码（客户端侧，Windows 自动调用 exe，其他平台调用本源码）
+    ├── join_room_linux.sh       #   Linux 命令行进房脚本
+    ├── bin/edge.exe             #   Windows: n2n v3.1.1 edge（官方源码交叉编译，支持 -E 等全部参数）
+    ├── bin/edge                 #   macOS/Linux: edge（install_mac.sh 编译后生成）
+    ├── bin/udp6_client_forward.exe # Windows: IPv6 本地转发器（工具自动启动/停止）
     ├── bin/supernode.exe        #   备用（本地开房调试用）
-    ├── driver/tap-windows/      #   TAP 虚拟网卡驱动（tapinstall + 官方安装器）
-    └── tools/WinIPBroadcast.exe #   局域网发现广播助手（可选，仓库不提供）
+    ├── driver/tap-windows/      #   Windows: TAP 虚拟网卡驱动（tapinstall + 官方安装器）
+    └── tools/WinIPBroadcast.exe #   Windows: 局域网发现广播助手（可选，仓库不提供）
 ```
 
 ## 开源与构建

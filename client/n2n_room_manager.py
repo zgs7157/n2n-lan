@@ -7,9 +7,12 @@ n2n 房间管理小工具 (N2N Room Manager)
 
 - 房主“创建房间”：自动生成 房间码 = community@网段#密钥，并以网段 .1 作为房主虚拟 IP 启动 edge。
 - 好友“加入房间”：粘贴房间码，自动建议空闲虚拟 IP，启动 edge 加入同一 community。
-- 底层封装 n2n edge（n2n v3.1.1 x64），自带 TAP-Windows 虚拟网卡驱动安装与防火墙放行。
+- 底层封装 n2n edge（n2n v3.1.1），自带虚拟网卡驱动检测与防火墙放行。
+- 跨平台：Windows 10/11 x64（TAP-Windows 驱动 + start.bat）；
+  macOS（tuntap 驱动 + start_mac.sh，Intel 与 Apple 芯片均可源码运行）；
+  Linux（TUN/TAP + start_linux.sh）。
 
-运行环境：Windows 10/11 x64，Python 3（本工具仅用标准库）。双击 start.bat 启动。
+运行环境：Windows / macOS / Linux，Python 3（本工具仅用标准库）。Windows 双击 start.bat 启动。
 """
 
 import argparse
@@ -32,6 +35,14 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 
 # ----------------------------------------------------------------------------
+# 平台判断
+# ----------------------------------------------------------------------------
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MACOS = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
+IS_POSIX = (IS_MACOS or IS_LINUX)
+
+# ----------------------------------------------------------------------------
 # 常量与路径
 # ----------------------------------------------------------------------------
 if getattr(sys, "frozen", False):
@@ -40,11 +51,16 @@ if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EDGE_EXE = os.path.join(BASE_DIR, "bin", "edge.exe")
+# edge 可执行名：Windows 为 edge.exe，macOS/Linux 为 edge（无扩展名，自行编译或 brew/apt 安装）
+EDGE_EXE = os.path.join(BASE_DIR, "bin", "edge.exe" if IS_WINDOWS else "edge")
+# IPv6 转发器：Windows 用打包好的 exe；macOS/Linux 用同目录源码（纯标准库，python3 直跑）
 FORWARDER_EXE = os.path.join(BASE_DIR, "bin", "udp6_client_forward.exe")
+FORWARDER_PY = os.path.join(BASE_DIR, "udp6_client_forward.py")
+# Windows 专用：TAP-Windows 驱动
 DRIVER_DIR = os.path.join(BASE_DIR, "driver", "tap-windows", "x64")
 TAP_INF = os.path.join(DRIVER_DIR, "OemVista.inf")
 TAP_INSTALLER = os.path.join(BASE_DIR, "driver", "tap-windows", "9.24.7.exe")
+# Windows 专用：广播助手（局域网游戏发现）
 WINIPBROADCAST_EXE = os.path.join(BASE_DIR, "tools", "WinIPBroadcast.exe")
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
@@ -254,12 +270,21 @@ _lang = "zh"
 
 
 def detect_lang():
-    """按 Windows 系统 UI 语言检测：中文系统默认中文，其余默认英文。"""
+    """按系统 UI 语言检测：中文系统默认中文，其余默认英文。
+    Windows 读 GetUserDefaultUILanguage；macOS/Linux 读 LANG 环境变量。"""
+    if IS_WINDOWS:
+        try:
+            ui = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            return "zh" if (ui & 0xFFFF) == 0x0804 else "en"
+        except Exception:
+            return "en"
     try:
-        ui = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-        return "zh" if (ui & 0xFFFF) == 0x0804 else "en"
+        lang = (os.environ.get("LANG") or os.environ.get("LC_ALL") or "").lower()
+        if lang.startswith("zh"):
+            return "zh"
     except Exception:
-        return "en"
+        pass
+    return "en"
 
 
 def tr(key, **kw):
@@ -427,20 +452,35 @@ def parse_supernode(sn):
 def get_local_ipv6s():
     """返回本机当前的 IPv6 地址列表（小写）。用于判断"开房者填的是不是自己"。"""
     addrs = set()
-    try:
-        out = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
-             "(Get-NetIPAddress -AddressFamily IPv6 -ErrorAction SilentlyContinue | "
-             "Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress"],
-            capture_output=True, text=True, timeout=30,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        ).stdout
-        for line in out.splitlines():
-            a = line.strip().lower()
-            if a:
-                addrs.add(a)
-    except Exception:
-        pass
+    if IS_WINDOWS:
+        try:
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "(Get-NetIPAddress -AddressFamily IPv6 -ErrorAction SilentlyContinue | "
+                 "Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress"],
+                capture_output=True, text=True, timeout=30,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ).stdout
+            for line in out.splitlines():
+                a = line.strip().lower()
+                if a:
+                    addrs.add(a)
+        except Exception:
+            pass
+    else:
+        # macOS / Linux：ifconfig 列出 inet6，取含 ':' 的全局/链路地址（去 fe80 之外的都可判断）
+        for cmd in (["ifconfig", "-a"],):
+            try:
+                out = subprocess.run(cmd, capture_output=True, text=True, timeout=15).stdout
+            except Exception:
+                continue
+            for line in out.splitlines():
+                m = re.match(r"\s*inet6\s+([0-9a-fA-F:]+)", line)
+                if m:
+                    a = m.group(1).lower()
+                    a = a.split("%")[0]  # 去掉 fe80::1%en0 的接口后缀
+                    if ":" in a:
+                        addrs.add(a)
     return addrs
 
 
@@ -456,94 +496,214 @@ def chat_broadcast_addr(virtual_ip):
 # 系统工具：驱动 / 防火墙 / 提权
 # ----------------------------------------------------------------------------
 def is_admin():
+    if IS_WINDOWS:
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except Exception:
+            return False
+    # macOS / Linux：euid==0 即 root
     try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        return os.geteuid() == 0
     except Exception:
         return False
 
 
 def run_elevated(exe, args, workdir=None, wait=False):
-    """以管理员权限运行，弹出 UAC 确认。返回 True 表示成功发起。"""
+    """以管理员/root 权限运行。
+    Windows：ShellExecuteW runas 弹 UAC；
+    macOS：osascript 弹系统授权框；
+    Linux：pkexec（有图形会话时）或 sudo。
+    返回 True 表示成功发起。"""
+    if IS_WINDOWS:
+        try:
+            res = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, workdir or "", 0)
+            return res > 32
+        except Exception:
+            return False
+    if IS_MACOS:
+        # osascript 提权执行：整个命令拼成一行，用 do shell script ... with administrator privileges
+        cmd = "cd '%s' && %s %s" % (
+            (workdir or os.getcwd()).replace("'", "'\\''"),
+            exe.replace("'", "'\\''"),
+            args.replace("'", "'\\''"),
+        )
+        script = 'do shell script "%s" with administrator privileges' % cmd.replace('"', '\\"')
+        try:
+            p = subprocess.Popen(["osascript", "-e", script],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if wait:
+                p.wait(timeout=120)
+            return True
+        except Exception:
+            return False
+    # Linux
     try:
-        res = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, workdir or "", 0)
-        return res > 32
+        p = subprocess.Popen(["pkexec", exe] + args.split(),
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if wait:
+            p.wait(timeout=120)
+        return True
+    except Exception:
+        pass
+    try:
+        p = subprocess.Popen(["sudo", exe] + args.split(),
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if wait:
+            p.wait(timeout=120)
+        return True
     except Exception:
         return False
 
 
 def tap_driver_installed():
-    """检测是否已安装 TAP-Windows 虚拟网卡驱动（tap0901）。"""
-    ps = (
-        "(Get-NetAdapter -ErrorAction SilentlyContinue | "
-        "Where-Object { $_.InterfaceDescription -like '*TAP*' -or $_.Name -like '*TAP*' } | "
-        "Measure-Object).Count"
-    )
-    try:
-        out = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
-            capture_output=True, text=True, timeout=30,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        ).stdout.strip()
-        if out.isdigit():
-            return int(out) > 0
-    except Exception:
-        pass
-    # 兜底：检查设备管理器中的驱动服务
-    try:
-        out = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             "(Get-CimInstance Win32_SystemDriver -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'tap*' }).Count"],
-            capture_output=True, text=True, timeout=30,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        ).stdout.strip()
-        if out.isdigit():
-            return int(out) > 0
-    except Exception:
-        pass
-    return False
+    """检测虚拟网卡驱动是否已装：
+    Windows：TAP-Windows (tap0901)；
+    macOS：tuntap 内核扩展（/dev/tap*）或原生 utun；
+    Linux：/dev/net/tun。"""
+    if IS_WINDOWS:
+        ps = (
+            "(Get-NetAdapter -ErrorAction SilentlyContinue | "
+            "Where-Object { $_.InterfaceDescription -like '*TAP*' -or $_.Name -like '*TAP*' } | "
+            "Measure-Object).Count"
+        )
+        try:
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+                capture_output=True, text=True, timeout=30,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ).stdout.strip()
+            if out.isdigit():
+                return int(out) > 0
+        except Exception:
+            pass
+        # 兜底：检查设备管理器中的驱动服务
+        try:
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "(Get-CimInstance Win32_SystemDriver -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'tap*' }).Count"],
+                capture_output=True, text=True, timeout=30,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ).stdout.strip()
+            if out.isdigit():
+                return int(out) > 0
+        except Exception:
+            pass
+        return False
+    if IS_MACOS:
+        # tuntap 驱动装好后会出现 /dev/tap0..tap15；n2n 也可走原生 utun（若 edge 支持）
+        try:
+            import glob
+            taps = glob.glob("/dev/tap*")
+            if taps:
+                return True
+        except Exception:
+            pass
+        # 兜底：检查 utun 接口（macOS 自带，无驱动依赖）
+        try:
+            out = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=15).stdout
+            return "utun" in out
+        except Exception:
+            return False
+    # Linux
+    return os.path.exists("/dev/net/tun")
 
 
 def install_tap_driver():
-    """静默安装 TAP-Windows 驱动。优先 tapinstall，失败则用官方安装器。"""
+    """安装/检测虚拟网卡驱动。返回 "already" / "ok" / "denied" / "fail"。
+    Windows：静默装 TAP-Windows；
+    macOS：提示用户装 tuntap（brew cask install tuntap）——GUI 里给引导；
+    Linux：提示 modprobe tun。"""
     if tap_driver_installed():
         return "already"
-    ok = run_elevated(os.path.join(DRIVER_DIR, "tapinstall.exe"),
-                      'install "%s" tap0901' % TAP_INF,
-                      workdir=DRIVER_DIR, wait=True)
-    time.sleep(4)
-    if tap_driver_installed():
-        return "ok"
-    if os.path.exists(TAP_INSTALLER):
-        ok = run_elevated(TAP_INSTALLER, "/S", workdir=os.path.dirname(TAP_INSTALLER), wait=True) or ok
-        time.sleep(6)
+    if IS_WINDOWS:
+        ok = run_elevated(os.path.join(DRIVER_DIR, "tapinstall.exe"),
+                          'install "%s" tap0901' % TAP_INF,
+                          workdir=DRIVER_DIR, wait=True)
+        time.sleep(4)
         if tap_driver_installed():
             return "ok"
-    return "fail" if ok else "denied"
+        if os.path.exists(TAP_INSTALLER):
+            ok = run_elevated(TAP_INSTALLER, "/S", workdir=os.path.dirname(TAP_INSTALLER), wait=True) or ok
+            time.sleep(6)
+            if tap_driver_installed():
+                return "ok"
+        return "fail" if ok else "denied"
+    if IS_MACOS:
+        # tuntap 驱动需用户手动安装（会弹系统安全确认），GUI 会给完整指引，这里只返回 "manual"
+        return "manual"
+    # Linux
+    return "manual"
 
 
 def add_firewall_rule():
-    rule = 'advfirewall firewall add rule name="n2n edge room" dir=in action=allow program="%s"' % EDGE_EXE
-    return run_elevated("netsh", rule, wait=False)
+    """放行 edge 入站。Windows：netsh；macOS/Linux：无 UI 弹窗则提示手动。"""
+    if IS_WINDOWS:
+        rule = 'advfirewall firewall add rule name="n2n edge room" dir=in action=allow program="%s"' % EDGE_EXE
+        return run_elevated("netsh", rule, wait=False)
+    # macOS / Linux：应用防火墙一般会自行弹窗询问，无需（也难）预设规则
+    return True
 
 
 def get_tap_ip():
-    """读取 TAP 网卡当前 IPv4 地址（可能为空）。
-    用 Get-NetIPConfiguration 按接口描述过滤：Get-NetIPAddress 对
-    老式 TAP(NDIS6) 驱动不暴露 InterfaceDescription，会查不到。"""
-    ps = (
-        "(Get-NetIPConfiguration -ErrorAction SilentlyContinue | "
-        "Where-Object { $_.InterfaceDescription -like '*TAP*' } | "
-        "ForEach-Object { $_.IPv4Address.IPAddress }) -join ', '"
-    )
+    """读取虚拟网卡当前 IPv4 地址（可能为空）。"""
+    if IS_WINDOWS:
+        ps = (
+            "(Get-NetIPConfiguration -ErrorAction SilentlyContinue | "
+            "Where-Object { $_.InterfaceDescription -like '*TAP*' } | "
+            "ForEach-Object { $_.IPv4Address.IPAddress }) -join ', '"
+        )
+        try:
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+                capture_output=True, text=True, timeout=30,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ).stdout.strip()
+            return out
+        except Exception:
+            return ""
+    if IS_MACOS:
+        try:
+            out = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=15).stdout
+            ips = []
+            cur_if = None
+            for line in out.splitlines():
+                m = re.match(r"^([a-z0-9]+):", line)
+                if m:
+                    cur_if = m.group(1)
+                m2 = re.match(r"\s*inet\s+(\d+\.\d+\.\d+\.\d+)", line)
+                if m2 and cur_if and (cur_if.startswith("tap") or cur_if.startswith("utun")):
+                    ips.append(m2.group(1))
+            return ", ".join(ips)
+        except Exception:
+            return ""
+    # Linux
     try:
-        out = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
-            capture_output=True, text=True, timeout=30,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        ).stdout.strip()
-        return out
+        out = subprocess.run(["ip", "-4", "addr", "show"], capture_output=True, text=True, timeout=15).stdout
+        ips = []
+        cur_if = None
+        for line in out.splitlines():
+            m = re.match(r"^\d+:\s+([a-zA-Z0-9_]+):", line)
+            if m:
+                cur_if = m.group(1)
+            m2 = re.match(r"\s*inet\s+(\d+\.\d+\.\d+\.\d+)", line)
+            if m2 and cur_if and (cur_if.startswith("tap") or cur_if.startswith("n2n") or cur_if.startswith("tun")):
+                ips.append(m2.group(1))
+        return ", ".join(ips)
     except Exception:
         return ""
+
+
+def open_folder(path):
+    """跨平台打开目录：Windows 资源管理器 / macOS Finder / Linux 文件管理器。"""
+    try:
+        if IS_WINDOWS:
+            os.startfile(path)
+        elif IS_MACOS:
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception:
+        pass
 
 
 # ----------------------------------------------------------------------------
@@ -660,9 +820,17 @@ class EdgeSession:
 
     def _start_forwarder(self, v6host, server_port):
         """为 IPv6 supernode 启动一个本地转发器（127.0.0.1:<本地端口> -> [v6host]:server_port）。
-        返回实际使用的本地端口；失败返回 None。"""
-        if not os.path.exists(FORWARDER_EXE):
-            return None
+        返回实际使用的本地端口；失败返回 None。
+        Windows 用打包好的 exe；macOS/Linux 用 python3 跑同目录源码。"""
+        if IS_WINDOWS:
+            if not os.path.exists(FORWARDER_EXE):
+                return None
+            fw_cmd = [FORWARDER_EXE]
+        else:
+            if not os.path.exists(FORWARDER_PY):
+                return None
+            py = sys.executable or "python3"
+            fw_cmd = [py, FORWARDER_PY]
         # 本地端口从 7655 起：7654 是 supernode 惯例端口，本机若同时开着
         # supernode（0.0.0.0:7654），转发器 bind 127.0.0.1:7654 会因
         # SO_REUSEADDR 并存而探测失真，导致环回；避开 7654 两个场景都安全。
@@ -671,8 +839,8 @@ class EdgeSession:
                 continue
             try:
                 p = subprocess.Popen(
-                    [FORWARDER_EXE, v6host, str(lp), str(server_port)],
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    fw_cmd + [v6host, str(lp), str(server_port)],
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WINDOWS else 0,
                 )
             except Exception:
                 continue
@@ -724,7 +892,8 @@ class EdgeSession:
         cfg = self.app.cfg
         if cfg.get("use_multicast", True):
             args.append("-E")
-        if cfg.get("use_game_metric", True):
+        if IS_WINDOWS and cfg.get("use_game_metric", True):
+            # -x 1 仅 Windows 支持（网络接口跃点数），macOS/Linux 传了会报错
             args += ["-x", "1"]
         args += ["-M", str(int(cfg.get("mtu", DEFAULT_MTU))), "-I", "room-" + community]
 
@@ -733,12 +902,13 @@ class EdgeSession:
             args,
             stdout=logf,
             stderr=subprocess.STDOUT,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WINDOWS else 0,
         )
         self.tailer = LogTailer(self.log_path, self.app.append_log)
         self.tailer.start()
 
-        if cfg.get("auto_broadcast") and os.path.exists(WINIPBROADCAST_EXE):
+        if cfg.get("auto_broadcast") and IS_WINDOWS and os.path.exists(WINIPBROADCAST_EXE):
+            # 广播助手仅 Windows 有对应工具
             try:
                 self.broadcast_proc = subprocess.Popen(
                     [WINIPBROADCAST_EXE], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -768,12 +938,20 @@ class EdgeSession:
             self.broadcast_proc = None
         for p in self.fw_procs:
             try:
-                # PyInstaller onefile 有父子进程，用 taskkill /T /F 整树杀干净
-                subprocess.run(
-                    ["taskkill", "/PID", str(p.pid), "/T", "/F"],
-                    capture_output=True, timeout=10,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
+                if IS_WINDOWS:
+                    # PyInstaller onefile 有父子进程，用 taskkill /T /F 整树杀干净
+                    subprocess.run(
+                        ["taskkill", "/PID", str(p.pid), "/T", "/F"],
+                        capture_output=True, timeout=10,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    )
+                else:
+                    # macOS / Linux：转发器是 python 单进程，terminate 即可
+                    p.terminate()
+                    try:
+                        p.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        p.kill()
             except Exception:
                 pass
         self.fw_procs = []
@@ -876,7 +1054,8 @@ class App:
         # 日志
         f_log = ttk.LabelFrame(self.root, text=tr("log_frame"))
         f_log.pack(fill="both", expand=True, **pad)
-        self.txt_log = scrolledtext.ScrolledText(f_log, height=12, state="disabled", font=("Consolas", 9))
+        log_font = ("Menlo", 10) if IS_MACOS else ("Consolas", 9)
+        self.txt_log = scrolledtext.ScrolledText(f_log, height=12, state="disabled", font=log_font)
         self.txt_log.pack(fill="both", expand=True, padx=6, pady=6)
 
         # 工具 + 设置
@@ -951,6 +1130,11 @@ class App:
                 return
             if res == "fail":
                 messagebox.showerror(tr("install_fail"), tr("install_fail_msg"))
+                return
+            if res == "manual":
+                # macOS / Linux：装好后需重新点创建房间
+                messagebox.showinfo(tr("check_result"),
+                                    "驱动安装需手动完成（见提示）。装好后请重新点击「创建房间」。")
                 return
             self.append_log(tr("log_driver_ready"))
 
@@ -1118,7 +1302,8 @@ class App:
         ttk.Button(top, text=tr("save"), command=self.save_chat_name).pack(side="left", padx=4)
         ttk.Label(top, text=tr("chat_name_hint"), foreground="#666").pack(side="left", padx=6)
 
-        self.txt_chat = scrolledtext.ScrolledText(win, height=14, state="disabled", font=("Microsoft YaHei UI", 10))
+        chat_font = ("PingFang SC", 11) if IS_MACOS else ("Microsoft YaHei UI", 10)
+        self.txt_chat = scrolledtext.ScrolledText(win, height=14, state="disabled", font=chat_font)
         self.txt_chat.pack(fill="both", expand=True, padx=10, pady=4)
 
         bottom = ttk.Frame(win)
@@ -1209,12 +1394,29 @@ class App:
             messagebox.showinfo(tr("check_result"), tr("driver_ok"))
         elif res == "ok":
             messagebox.showinfo(tr("installed_ok"), tr("installed_ok_msg"))
+        elif res == "manual":
+            # macOS / Linux：无法静默装，给出系统指引
+            if IS_MACOS:
+                messagebox.showinfo(
+                    tr("check_result"),
+                    "macOS 需要 tuntap 驱动（Apple 芯片需允许内核扩展）。\n"
+                    "请在「系统设置 → 隐私与安全性」允许后运行：\n"
+                    "  brew install --cask tuntap\n"
+                    "或参考官网 README 的 macOS 章节。")
+            else:
+                messagebox.showinfo(
+                    tr("check_result"),
+                    "Linux 需要 TUN 设备：sudo modprobe tun（或 sudo apt install tunctl）")
         elif res == "denied":
             messagebox.showerror(tr("not_installed"), tr("uac_cancel"))
         else:
             messagebox.showerror(tr("install_fail"), tr("silent_fail_msg"))
 
     def cmd_firewall(self):
+        if IS_MACOS:
+            # macOS 应用防火墙：首次运行 edge 时系统会自动弹窗询问，无需手动放行
+            self.append_log(">> macOS 会在首次运行 edge 时自动询问是否允许传入连接，点「允许」即可")
+            return
         ok = add_firewall_rule()
         if ok:
             self.append_log(tr("log_fw_ok"))
@@ -1223,10 +1425,10 @@ class App:
 
     def open_logs(self):
         os.makedirs(LOG_DIR, exist_ok=True)
-        os.startfile(LOG_DIR)
+        open_folder(LOG_DIR)
 
     def open_bin(self):
-        os.startfile(os.path.join(BASE_DIR, "bin"))
+        open_folder(os.path.join(BASE_DIR, "bin"))
 
     # ---------------- 日志 / 状态刷新 ----------------
     def append_log(self, line):
@@ -1260,9 +1462,11 @@ class App:
 def selftest():
     print("== n2n 房间管理小工具 自检 ==")
     print("Python:", sys.version.split()[0])
-    print("edge.exe 存在:", os.path.exists(EDGE_EXE))
+    print("平台:", sys.platform)
+    print("edge 存在:", os.path.exists(EDGE_EXE))
     print("驱动目录存在:", os.path.exists(TAP_INF))
-    print("TAP 驱动已安装:", tap_driver_installed())
+    print("虚拟网卡驱动就绪:", tap_driver_installed())
+    print("本机 IPv6:", ", ".join(sorted(get_local_ipv6s())) or "(无)")
     code = make_room_code("mc-pixel-creeper-1234", "10.88.0", "Ab3CdEfGhJ")
     print("生成房间码示例:", code)
     print("解析结果:", parse_room_code(code))
