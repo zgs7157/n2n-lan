@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """重建 n2n-lan-client.zip（分发用）
-打包 client/ 目录：exe + bat + 说明 + Linux 脚本 + bin + driver + tools
-排除：config.json（本机房间密钥）、logs/、*.py、__pycache__、tools/WinIPBroadcast.exe（许可不明）
+打包 client/ 目录：exe + 源码 + bat/sh + 说明 + bin + driver + tools
+全平台包：Windows 用 exe（start.bat），macOS/Linux 用源码（start_mac.sh / join_room_linux.sh）
+排除：config.json（本机房间密钥）、logs/、__pycache__、*.pyc、tools/WinIPBroadcast.exe（许可不明）
 """
 import os
 import zipfile
@@ -14,8 +15,8 @@ PREFIX = "n2n-lan-client/"
 
 EXCLUDE_DIRS = {"logs", "__pycache__"}
 EXCLUDE_FILES = {"config.json"}
-EXCLUDE_SUFFIXES = (".py", ".pyc")
-EXCLUDE_NAMES = {"WinIPBroadcast.exe"}
+EXCLUDE_SUFFIXES = (".pyc",)
+EXCLUDE_NAMES = {"WinIPBroadcast.exe", "n2n_room_manager_old_noipv6.exe", "edge_lucktu_nov6.bak.exe"}
 
 
 def main():

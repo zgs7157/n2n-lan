@@ -16,6 +16,9 @@ client/n2n_room_manager.exe
 /bin/
 /n2n-lan-client/
 
+# 例外：官网在线下载的客户端整包（随 GitHub Pages 一起发布，提供站内直下/直链）
+!docs/downloads/n2n-lan-client.zip
+
 # 许可不明的第三方工具（EasyN2N 提取，请按 README 自行获取）
 client/tools/WinIPBroadcast.exe
 
