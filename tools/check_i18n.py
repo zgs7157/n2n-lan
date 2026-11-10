@@ -52,10 +52,11 @@ missing_en = sorted(k for k in keys if k not in en)
 print('zh 缺失:', missing_zh if missing_zh else '无')
 print('en 缺失:', missing_en if missing_en else '无')
 
-# 3) 检查下载区关键元素
-for pat in ['downloads/n2n-lan-client.zip', 'id="copyDl"', 'id="dlUrl"', 'aria2c -x 16 -s 16',
-            'e6e8ebc1af7e4a3dde67bcc0db92b1191682cc5fc110e631baf8c62cb2b4f51c', 'download="n2n-lan-client.zip"']:
+# 3) 检查下载区关键元素（主下载 = 安装程序；绿色版 zip 作为次要入口）
+for pat in ['downloads/n2n-lan-setup-1.0.6.exe', 'id="copyDl"', 'id="dlUrl"', 'aria2c -x 16 -s 16',
+            '2fce82bc48a2ca9e87fff97737f35e89076cccd6239e03529fc4eeeb7e3f6391',
+            'download="n2n-lan-setup-1.0.6.exe"', 'downloads/n2n-lan-client.zip', 'dl1-green']:
     print(('OK  ' if pat in html else 'MISS'), pat)
 
 # 4) 统计 download 属性链接数量
-print('download 属性出现次数:', html.count('download="n2n-lan-client.zip"'))
+print('download 属性出现次数:', html.count('download="n2n-lan-setup-1.0.6.exe"'))
