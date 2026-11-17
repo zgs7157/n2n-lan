@@ -34,3 +34,6 @@ server/visit_stats.exe
 # 安装包构建产物与中间目录（安装包随 docs/downloads 发布）
 dist_installer/
 _build_tmp/
+
+# PyInstaller 中间目录
+build_tmp/

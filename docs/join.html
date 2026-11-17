@@ -94,7 +94,7 @@
   <!-- 房间卡片 -->
   <div class="card" id="roomCard">
     <div class="room-name" id="roomName">开黑房</div>
-    <div class="room-sub" id="roomSub">手机直连 · 无需安装任何软件</div>
+    <div class="room-sub" id="roomSub">手机直连 · 需房主已把 25565 转发到公网</div>
     <div class="addr" id="addr">—</div>
     <button class="btn primary" id="copyBtn">复制服务器地址</button>
     <button class="btn ghost" id="qrBtn">生成二维码发给朋友</button>
@@ -114,8 +114,8 @@
 
   <!-- 无参数时：输入地址 -->
   <div class="input-mode" id="inputMode">
-    <label>房主填一次，生成进房链接 / 二维码发给朋友</label>
-    <input id="ipInput" type="text" inputmode="url" placeholder="服务器地址，如 1.2.3.4:25565" autocomplete="off">
+    <label>房主填一次（公网地址，且已在路由器把 25565 转发到房主电脑），生成进房链接 / 二维码发给朋友</label>
+    <input id="ipInput" type="text" inputmode="url" placeholder="公网地址，如 1.2.3.4:25565" autocomplete="off">
     <button class="btn primary" id="genBtn">生成进房卡片</button>
   </div>
 
@@ -159,7 +159,7 @@
     server = (port && port !== '25565') ? (ip + ':' + port) : ip;
     addrEl.textContent = server;
     roomName.textContent = room;
-    roomSub.textContent = '手机直连 · 无需安装任何软件';
+    roomSub.textContent = '手机直连 · 需房主已把 25565 转发到公网';
   }
 
   function build(){

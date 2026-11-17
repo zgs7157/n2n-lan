@@ -2,7 +2,22 @@
 
 > **中文版见 [README.md](README.md)** · English: this file
 
-Turn two (or more) PCs on different networks — with different accounts — into the
+## Zero: three steps (most players only need this)
+
+1. **Download and install** `n2n-lan-setup-1.1.0.exe`. You get a desktop shortcut with the app icon, and the installer ships its own uninstaller.
+2. **The host clicks "Create room".** The client installs the virtual adapter, allows the firewall rule and picks a server on its own. A few seconds later the status turns to Connected and you get an **8-character invite code** (e.g. `4Z9G-VLDK`, copyable and with a QR code).
+3. **The friend pastes the code and clicks "Join".** Both sides show Connected.
+
+Then, in Minecraft: the host clicks "Open to LAN" → the world shows up directly in your
+friend's Multiplayer list. If the list is stale, use Direct Connect with `10.x.0.1:25565`.
+
+No public server, no port forwarding, no need to know what community / keys / subnets mean.
+Sections 1–10 below are the deep technical details (self-hosting a supernode, Linux/macOS
+joining, IPv6, troubleshooting) — normal play does not need them.
+
+---
+
+Turn two (or more) PCs on different networks into the
 **same "room"**, so the game thinks you are on one local area network.
 Built for **Minecraft (Java) and any game with a LAN/co-op mode**.
 

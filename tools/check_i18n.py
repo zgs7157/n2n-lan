@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """校验 docs/index.html：data-i18n 键在 zh/en 字典中是否都存在，并检查新增下载区元素"""
-import re, io, sys, json
+import re, io, sys, json, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-p = r'C:\Users\Administrator\DoubaoWork\chats\2026-10-08\new-chat\n2n-lan\docs\index.html'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+p = os.path.join(ROOT, 'docs', 'index.html')
 html = open(p, encoding='utf-8').read()
 
 # 1) 提取 HTML 中所有 data-i18n 键
@@ -53,10 +54,10 @@ print('zh 缺失:', missing_zh if missing_zh else '无')
 print('en 缺失:', missing_en if missing_en else '无')
 
 # 3) 检查下载区关键元素（主下载 = 安装程序；绿色版 zip 作为次要入口）
-for pat in ['downloads/n2n-lan-setup-1.0.6.exe', 'id="copyDl"', 'id="dlUrl"', 'aria2c -x 16 -s 16',
-            '2fce82bc48a2ca9e87fff97737f35e89076cccd6239e03529fc4eeeb7e3f6391',
-            'download="n2n-lan-setup-1.0.6.exe"', 'downloads/n2n-lan-client.zip', 'dl1-green']:
+for pat in ['downloads/n2n-lan-setup-1.1.0.exe', 'id="copyDl"', 'id="dlUrl"', 'aria2c -x 16 -s 16',
+            'b6b3085f002e9651dbf8b51df23da992012964e9e75a8368a8d8586ddd4277ec',
+            'download="n2n-lan-setup-1.1.0.exe"', 'downloads/n2n-lan-client.zip', 'dl1-green']:
     print(('OK  ' if pat in html else 'MISS'), pat)
 
 # 4) 统计 download 属性链接数量
-print('download 属性出现次数:', html.count('download="n2n-lan-setup-1.0.6.exe"'))
+print('download 属性出现次数:', html.count('download="n2n-lan-setup-1.1.0.exe"'))

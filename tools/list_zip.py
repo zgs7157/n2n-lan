@@ -1,6 +1,7 @@
-import zipfile, io, sys
+import zipfile, io, sys, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-z = zipfile.ZipFile(r'C:\Users\Administrator\DoubaoWork\chats\2026-10-08\new-chat\n2n-lan\n2n-lan-client.zip')
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+z = zipfile.ZipFile(os.path.join(ROOT, 'n2n-lan-client.zip'))
 print('entries:', len(z.namelist()))
 for n in z.namelist():
     print(' ', n, z.getinfo(n).file_size)
