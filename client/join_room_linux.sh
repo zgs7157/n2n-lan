@@ -306,4 +306,5 @@ if [ -n "$FW_PID" ]; then
 else
     echo "  sudo kill $EDGE_PID && sudo ip link del n2n0"
 fi
+echo "新版脚本：https://github.com/zgs7157/n2n-lan/releases/latest"
 echo "=============================================="

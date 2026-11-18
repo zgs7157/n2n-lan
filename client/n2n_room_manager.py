@@ -83,6 +83,14 @@ DEFAULT_SUPERNODE_PORT = 7654
 MC_PORT = 25565            # 我的世界 Java 版默认端口
 MAX_ROOM_PLAYERS = 8       # 建议人数上限（仅提示，n2n 层不强制）
 
+# 版本号与在线更新（与 setup_n2n.iss 的 MyAppVersion、Release tag 保持一致）
+APP_VERSION = "1.2.1"
+UPDATE_REPO = "zgs7157/n2n-lan"
+UPDATE_API = "https://api.github.com/repos/%s/releases/latest" % UPDATE_REPO
+UPDATE_PAGE = "https://github.com/%s/releases/latest" % UPDATE_REPO
+UPDATE_INTERVAL = 24 * 3600      # 自动检查间隔（秒）；手动点按钮不受限
+UPDATE_LOCAL_PROXIES = ["http://127.0.0.1:26561", "http://127.0.0.1:7890"]
+
 # 房间聊天：走虚拟局域网 UDP 广播（房间内所有成员同一网段，广播即房间内消息）
 CHAT_PORT = 23333
 CHAT_PROTO_VERSION = 1
@@ -99,6 +107,7 @@ DEFAULT_CONFIG = {
     "lang": "",               # 界面语言：zh/en，空 = 按系统语言自动
     "username": "",           # 房间聊天显示名
     "rooms": {},              # community -> {"subnet": "...", "key": "...", "my_ip": "...", "last_host": 2}
+    "update_check": {"last": 0, "skip": ""},   # 上次自动检查时间戳 / 用户选择跳过的版本
 }
 
 RE_ROOM_CODE = re.compile(r"^([A-Za-z0-9_-]{3,32})@(10\.\d{1,3}\.0)#([A-Za-z0-9]{6,16})$")
@@ -280,6 +289,18 @@ LANG_ZH = {
     "leave_confirm": "退出后房间就关闭了，朋友会掉线。确定退出？",
     "not_now": "再想想",
     "yes": "确定",
+    # 在线更新
+    "ver_btn": "版本 v%(v)s",
+    "ver_btn_tip": "点击检查新版本",
+    "update_available": "发现新版本 v%(new)s（当前 v%(cur)s）",
+    "update_goto": "去下载",
+    "update_later": "以后再说",
+    "update_skip": "不再提示此版本",
+    "version_label": "当前版本 v%(v)s",
+    "update_checking": "正在检查更新…",
+    "update_latest": "已是最新版本（v%(v)s）",
+    "update_failed": "检查更新失败：连不上 GitHub。若开了加速器请稍后再试。",
+    "update_none": "暂时拿不到版本信息，请稍后再试",
 }
 
 LANG_EN = {
@@ -454,6 +475,18 @@ LANG_EN = {
     "leave_confirm": "Leaving closes the room and your friends will disconnect. Leave?",
     "not_now": "Not now",
     "yes": "Yes",
+    # Online update
+    "ver_btn": "Version v%(v)s",
+    "ver_btn_tip": "Click to check for updates",
+    "update_available": "New version v%(new)s available (you have v%(cur)s)",
+    "update_goto": "Download",
+    "update_later": "Later",
+    "update_skip": "Don't remind me again",
+    "version_label": "Current version v%(v)s",
+    "update_checking": "Checking for updates…",
+    "update_latest": "You're on the latest version (v%(v)s)",
+    "update_failed": "Update check failed: GitHub is unreachable. If a proxy/accelerator is on, try again later.",
+    "update_none": "Couldn't get version info right now, please try again later",
 }
 
 LANGUAGES = {"zh": LANG_ZH, "en": LANG_EN}
@@ -521,6 +554,83 @@ def save_config(cfg):
             json.dump(cfg, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
+
+
+# ----------------------------------------------------------------------------
+# 版本与在线更新
+# ----------------------------------------------------------------------------
+def version_tuple(text):
+    """'V1.2.1' / 'v1.2.1' / '1.2.1' / 'v1.2.1-beta' → (1, 2, 1)；解析失败返回 ()"""
+    m = re.search(r"(\d+(?:\.\d+)*)", (text or "").strip())
+    if not m:
+        return ()
+    return tuple(int(x) for x in m.group(1).split("."))
+
+
+def compare_version(a, b):
+    """a 比 b 新返回 1，相同返回 0，更旧返回 -1；位数不足按 0 补齐"""
+    ta, tb = version_tuple(a), version_tuple(b)
+    if not ta or not tb:
+        return 0
+    n = max(len(ta), len(tb))
+    ta = ta + (0,) * (n - len(ta))
+    tb = tb + (0,) * (n - len(tb))
+    return (ta > tb) - (ta < tb)
+
+
+def _urllib_open(url, proxy=None, timeout=8):
+    if proxy:
+        handler = urllib.request.ProxyHandler({"http": proxy, "https": proxy})
+    else:
+        handler = urllib.request.ProxyHandler({})   # 空 = 显式直连，不吃系统代理
+    opener = urllib.request.build_opener(handler)
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "n2n-lan-room-manager/%s" % APP_VERSION,
+        "Accept": "application/vnd.github+json",
+    })
+    with opener.open(req, timeout=timeout) as resp:
+        return resp.read()
+
+
+def fetch_latest_release(timeout=8):
+    """查 GitHub 最新 Release，返回 (tag, 页面地址)；取不到返回 (None, "")。
+    依次尝试：直连 → 本机常见代理端口（Steam++ / Clash），任一条通路成功即用。
+    GitHub 在部分网络下必须走代理，所以要留代理兜底；反过来代理没开时直连也能成。"""
+    for proxy in [None] + UPDATE_LOCAL_PROXIES:
+        try:
+            raw = _urllib_open(UPDATE_API, proxy=proxy, timeout=timeout)
+            data = json.loads(raw.decode("utf-8", "ignore"))
+            tag = (data.get("tag_name") or "").strip()
+            url = (data.get("html_url") or UPDATE_PAGE).strip()
+            if tag:
+                return tag, url
+        except Exception:
+            continue
+    return None, ""
+
+
+def open_external(url):
+    """用系统默认浏览器打开链接。打包成无控制台的 exe 后 webbrowser 有时不灵，逐级兜底。"""
+    try:
+        if IS_WINDOWS:
+            os.startfile(url)
+            return True
+    except Exception:
+        pass
+    try:
+        if IS_MACOS:
+            subprocess.Popen(["open", url])
+            return True
+        if IS_LINUX:
+            subprocess.Popen(["xdg-open", url])
+            return True
+    except Exception:
+        pass
+    try:
+        import webbrowser
+        return webbrowser.open(url)
+    except Exception:
+        return False
 
 
 # ----------------------------------------------------------------------------
@@ -1946,6 +2056,11 @@ class App:
         self._chat_cache = []
         self.chat_listener = ChatListener(self.on_chat_msg)
         self.chat_listener.start()
+        # 在线更新：发现新版后在窗口顶部显示提示条
+        self._latest_tag = ""
+        self._latest_url = ""
+        self._update_busy = False
+        self._ver_btn = None
 
         global _lang
         _lang = self.cfg.get("lang") or detect_lang()
@@ -1958,13 +2073,30 @@ class App:
 
         self._build_ui()
         self._tick()
+        # 启动 4 秒后自动查一次新版本（距上次检查不足 24 小时则跳过）
+        self.root.after(4000, self._maybe_auto_check)
 
     # ---------------- 界面 ----------------
     def _build_ui(self):
         head = ttk.Frame(self.root)
         head.pack(fill="x", padx=16, pady=(12, 0))
+        self._head = head
         ttk.Label(head, text=tr("app_title"), font=("", 15, "bold")).pack(side="left")
         ttk.Button(head, text=tr("settings_btn"), command=self.open_settings).pack(side="right")
+        self._ver_btn = ttk.Button(head, text=tr("ver_btn", v=APP_VERSION),
+                                   command=lambda: self.check_update(manual=True))
+        self._ver_btn.pack(side="right", padx=(0, 8))
+
+        # 更新提示条：发现新版才 pack 出来（默认隐藏）
+        self.bar_update = tk.Frame(self.root, bg="#fff8e1")
+        tk.Button(self.bar_update, text=tr("update_skip"), bd=0, bg="#fff8e1", fg="#8a5a00",
+                  activebackground="#fff0c2", relief="flat", cursor="hand2",
+                  command=self._skip_update_version).pack(side="right", padx=(0, 12), pady=8)
+        ttk.Button(self.bar_update, text=tr("update_goto"),
+                   command=self._open_update_page).pack(side="right", padx=6, pady=8)
+        self.lbl_update = tk.Label(self.bar_update, text="", bg="#fff8e1", fg="#8a5a00",
+                                   anchor="w", justify="left", font=("", 10), wraplength=500)
+        self.lbl_update.pack(side="left", fill="x", expand=True, padx=(16, 8), pady=8)
 
         ttk.Label(self.root, text=tr("simple_tagline"), foreground="#777").pack(anchor="w", padx=16, pady=(2, 12))
 
@@ -2014,6 +2146,84 @@ class App:
         ttk.Button(crow, text=tr("leave_btn"), command=self.leave_room).pack(side="right")
 
         self.lbl_tip.pack(anchor="w", padx=16, pady=(16, 4))
+
+    # ---------------- 在线更新 ----------------
+    def _maybe_auto_check(self):
+        """启动后自动查一次新版本；距上次检查不足 24 小时就跳过，避免每次开窗都去戳 GitHub"""
+        uc = self.cfg.get("update_check") or {}
+        try:
+            last = float((uc or {}).get("last") or 0)
+        except (TypeError, ValueError):
+            last = 0
+        if time.time() - last >= UPDATE_INTERVAL:
+            self.check_update(manual=False)
+
+    def check_update(self, manual=False):
+        """manual=True 时用户点了版本号按钮，无论结果都回一句；False 为后台静默检查"""
+        if self._update_busy:
+            return
+        self._update_busy = True
+        if self._ver_btn is not None:
+            self._ver_btn.configure(state="disabled", text=tr("update_checking"))
+        threading.Thread(target=self._update_worker, args=(manual,), daemon=True).start()
+
+    def _update_worker(self, manual):
+        try:
+            tag, url = fetch_latest_release()
+        except Exception:
+            tag, url = None, ""
+        try:
+            self.root.after(0, lambda: self._update_done(manual, tag, url))
+        except Exception:
+            pass
+
+    def _update_done(self, manual, tag, url):
+        self._update_busy = False
+        if self._ver_btn is not None:
+            self._ver_btn.configure(state="normal", text=tr("ver_btn", v=APP_VERSION))
+        self._latest_tag = tag or ""
+        self._latest_url = url or UPDATE_PAGE
+        self._mark_checked()
+
+        if not tag:
+            if manual:
+                messagebox.showinfo(tr("info"), tr("update_none"), parent=self.root)
+            return
+        if compare_version(tag, APP_VERSION) > 0:
+            skip = ((self.cfg.get("update_check") or {}).get("skip") or "").strip()
+            if not manual and skip and compare_version(tag, skip) <= 0:
+                return                       # 用户选了"不再提示此版本"
+            self._show_update_bar(tag)
+        elif manual:
+            messagebox.showinfo(tr("info"), tr("update_latest", v=APP_VERSION), parent=self.root)
+
+    def _mark_checked(self):
+        uc = self.cfg.get("update_check")
+        if not isinstance(uc, dict):
+            uc = {"last": 0, "skip": ""}
+        uc["last"] = int(time.time())
+        self.cfg["update_check"] = uc
+        save_config(self.cfg)
+
+    def _show_update_bar(self, tag):
+        self._latest_tag = tag
+        shown = re.sub(r"^[vV]", "", (tag or "").strip())   # tag 自带 V 前缀，展示时不重复
+        self.lbl_update.configure(text=tr("update_available", new=shown, cur=APP_VERSION))
+        if not self.bar_update.winfo_manager():
+            self.bar_update.pack(fill="x", after=self._head)
+
+    def _open_update_page(self):
+        open_external(self._latest_url or UPDATE_PAGE)
+
+    def _skip_update_version(self):
+        if self._latest_tag:
+            uc = self.cfg.get("update_check")
+            if not isinstance(uc, dict):
+                uc = {"last": 0, "skip": ""}
+            uc["skip"] = self._latest_tag
+            self.cfg["update_check"] = uc
+            save_config(self.cfg)
+        self.bar_update.pack_forget()
 
     def _set_state(self, kind, note=""):
         color = self.STATE_COLORS.get(kind, "#444")
