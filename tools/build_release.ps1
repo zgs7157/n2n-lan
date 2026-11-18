@@ -1,4 +1,4 @@
-# n2n-lan 1.2.0 打包流水线（本机执行）
+# n2n-lan 1.2.1 打包流水线（本机执行）
 # 用法：pwsh -File tools\build_release.ps1
 $ErrorActionPreference = "Stop"
 $root = "D:\N2N\n2n-lan"
@@ -10,7 +10,7 @@ $icon   = Join-Path $client "n2n-lan.ico"
 $verFile = Join-Path $root "tools\version_info.txt"
 $py = "C:\Python314\python.exe"
 $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-$setupName = "n2n-lan-setup-1.2.0.exe"
+$setupName = "n2n-lan-setup-1.2.1.exe"
 
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 

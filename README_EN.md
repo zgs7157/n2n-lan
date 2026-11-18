@@ -121,13 +121,19 @@ use `client/join_room_linux.sh`:
    sudo cp edge /usr/local/bin/ && edge --version   # check version
    ```
    (For ARM machines pick `n2n_v3_linux_arm64(aarch64)_v3.1.1_r1255_static_by_heiye.tar.gz`.)
-2. Download and run the script (password room / no-password room):
+2. Download and run the script (just paste the invite code the client shows, same as a Windows friend):
    ```bash
    wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
-   sudo bash join_room_linux.sh 'ROOM_CODE' 482913 your-server-ip:7654
-   sudo bash join_room_linux.sh 'ROOM_CODE' your-server-ip:7654   # no-password
+   sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
+   # or pass the server separately:
+   sudo bash join_room_linux.sh J7N3-WD8Y 39.162.81.144:7654
    ```
    (If raw.githubusercontent is unreachable, prefix the URL with `https://ghproxy.net/`.)
+   Linux uses the **same derivation rules** as Windows: the 8-character room code is hashed with
+   sha256 into the community, virtual subnet and key, so the same code always lands in the same room.
+   The candidate virtual IP is spread by machine-id, the script asks the host for a slot on join, and
+   if the host fell back to IPv6 it starts the local forwarder (`udp6_client_forward.py`) automatically.
+   The legacy long code `community@10.x.0#key` is still accepted as the first argument.
 3. Minecraft Multiplayer → Direct Connect → `10.x.0.1:25565`.
 
 > The script creates a virtual NIC `n2n0` and needs root; clean up as printed on exit.

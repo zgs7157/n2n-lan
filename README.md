@@ -105,14 +105,19 @@ community@网段#密钥      示例：mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
    sudo cp edge /usr/local/bin/ && edge --version   # 确认版本
    ```
    （ARM 机器选 `n2n_v3_linux_arm64(aarch64)_v3.1.1_r1255_static_by_heiye.tar.gz`）
-2. 下载脚本并执行（带密码房 / 免密房）：
+2. 下载脚本并执行（**直接粘客户端给出的邀请码**即可，与 Windows 好友用法完全一致）：
    ```bash
    wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
-   sudo bash join_room_linux.sh '房间码' 482913 你的服务器IP:7654
-   sudo bash join_room_linux.sh '房间码' 你的服务器IP:7654
+   sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
+   # 房间码和服务器分开给也行：
+   sudo bash join_room_linux.sh J7N3-WD8Y 39.162.81.144:7654
    ```
    （raw.githubusercontent 直连不通时，给 wget 加 ghproxy 前缀：
    `https://ghproxy.net/https://raw.githubusercontent.com/...`）
+   Linux 端与 Windows 用**同一套派生规则**：8 位房间码经 sha256 推出 community、虚拟网段和密钥，
+   所以同一个码在任何机器算出的都是同一个房间；虚拟 IP 按本机 machine-id 分散，进房后会向房主领号，
+   房主走 IPv6 兜底时脚本会自动起本地转发器（`udp6_client_forward.py`）。
+   旧版长房间码 `community@10.x.0#密钥` 仍兼容，作为第一个参数传入即可。
 3. MC 多人游戏 → 直接连接 → 填 `10.x.0.1:25565`。
 
 > 注意：n2n 客户端必须为 **v3**（与服务器协议一致）。脚本会创建虚拟网卡 `n2n0`，需要 root；退出房间按脚本结尾提示清理。

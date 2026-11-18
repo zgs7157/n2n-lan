@@ -1,7 +1,7 @@
 ; n2n-lan 房间管理器 安装脚本（Inno Setup 6）
 ; 编译：ISCC.exe setup_n2n.iss
 #define MyAppName "n2n-lan 房间管理器"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.2.1"
 #define MyAppPublisher "n2n-lan"
 #define MyAppURL "https://zgs7157.github.io/n2n-lan/"
 #define MyAppExeName "n2n_room_manager.exe"
@@ -16,7 +16,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}releases
-VersionInfoVersion=1.2.0.0
+VersionInfoVersion=1.2.1.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoProductName={#MyAppName}
