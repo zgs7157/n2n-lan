@@ -262,14 +262,21 @@ LANG_ZH = {
     "fail_human": "网络环境不支持，正在尝试备用方案…",
     "fail_final": "这一步没成功。换个网络（比如手机热点）再试，或让朋友当房主。",
     "room_busy_hint": "房间座位被占用了，等 30 秒再试一次",
-    "no_public_net": "你这边的网络没有公网地址，暂时当不了房主。可以换手机热点试试，或让朋友当房主。",
+    "no_public_net": "试了公网 IPv4、公网 IPv6、同局域网三种方式都没通。可以换手机热点试试，或让朋友当房主。",
+    "no_server_hint": "这个房间码里没带服务器地址，请向房主要完整邀请码（码后面带 @地址 的那种）。",
     "bad_code_hint": "房间码不对。应该是 8 位字母数字，例如「ABCD-EFGH」",
     "need_code": "请先粘贴朋友给你的邀请码",
-    "host_mode_v6": "房间已就绪（IPv6 直连）",
+    "host_mode_v6": "房间已就绪（IPv6 直连，好友无需端口转发）",
     "host_mode_v4": "房间已就绪（已自动开放端口）",
+    "host_mode_lan": "房间已就绪（仅限同一局域网内进房）",
     "host_mode_public": "房间已就绪（公共节点中转）",
     "host_mode_manual": "房间已就绪。如果好友进不来：在路由器把 UDP 7654 转发到 %(lan)s，再让好友重新加入。",
     "lan_unknown": "本机局域网地址",
+    "log_v6_gateway": ">> 已开启 IPv6 反向转发器：[::]:%(port)d → 本机 supernode（好友可用 IPv6 地址连进来）",
+    "log_v6_gateway_fail": ">> IPv6 反向转发器没能启动，好友可能连不上；可让好友改走同一局域网或换网络",
+    "log_alloc_up": ">> 房主 IP 发号已开启（%(ip)s:%(port)d），好友进房会自动领到不重复的虚拟 IP",
+    "log_alloc_fail": ">> IP 发号服务没能启动，好友可能撞到同一个虚拟 IP",
+    "log_ip_switch": ">> 房主分配虚拟 IP：%(new)s（原 %(old)s），正在用新 IP 重连",
     "leave_confirm": "退出后房间就关闭了，朋友会掉线。确定退出？",
     "not_now": "再想想",
     "yes": "确定",
@@ -429,14 +436,21 @@ LANG_EN = {
     "fail_human": "This network isn't cooperating, trying a fallback…",
     "fail_final": "That didn't work. Try another network (a phone hotspot works well), or let your friend host.",
     "room_busy_hint": "This seat in the room is still taken, try again in 30 seconds",
-    "no_public_net": "Your network has no public address, so you can't host right now. Try a phone hotspot, or let your friend host.",
+    "no_public_net": "Public IPv4, public IPv6 and same-LAN were all tried and none worked. Try a phone hotspot, or let your friend host.",
+    "no_server_hint": "This room code carries no server address. Ask the host for the full invite code (the one with @address appended).",
     "bad_code_hint": "That room code doesn't look right. It should be 8 letters/digits, e.g. \"ABCD-EFGH\"",
     "need_code": "Paste the invite code your friend sent you first",
-    "host_mode_v6": "Room ready (direct IPv6)",
+    "host_mode_v6": "Room ready (direct IPv6, no port forwarding needed)",
     "host_mode_v4": "Room ready (port opened automatically)",
+    "host_mode_lan": "Room ready (same LAN only)",
     "host_mode_public": "Room ready (public node relay)",
     "host_mode_manual": "Room ready. If your friend can't get in: forward UDP 7654 to %(lan)s on your router, then ask them to rejoin.",
     "lan_unknown": "this PC's LAN address",
+    "log_v6_gateway": ">> IPv6 reverse forwarder is up: [::]:%(port)d -> local supernode (friends can join over IPv6)",
+    "log_v6_gateway_fail": ">> The IPv6 reverse forwarder did not start; friends may not reach you. Try the same LAN or another network.",
+    "log_alloc_up": ">> Host IP allocation is up (%(ip)s:%(port)d); joiners get a unique virtual IP automatically",
+    "log_alloc_fail": ">> IP allocation did not start; joiners may end up on the same virtual IP",
+    "log_ip_switch": ">> Host assigned virtual IP %(new)s (was %(old)s); reconnecting with the new IP",
     "leave_confirm": "Leaving closes the room and your friends will disconnect. Leave?",
     "not_now": "Not now",
     "yes": "Yes",
@@ -638,17 +652,212 @@ def parse_invite(text):
     return params
 
 
+def machine_id(cfg=None):
+    """本机稳定标识：首次生成随机串存进配置，用于分散虚拟 IP 与向房主申请 IP。
+    不依赖硬件指纹，重装软件会换新 ID（代价只是换一个尾号，不影响房间）。"""
+    cfg = cfg if cfg is not None else load_config()
+    mid = str(cfg.get("machine_id") or "").strip()
+    if len(mid) >= 8:
+        return mid
+    mid = secrets.token_hex(8)
+    cfg["machine_id"] = mid
+    try:
+        save_config(cfg)
+    except Exception:
+        pass
+    return mid
+
+
+def pick_candidate_ip(subnet, cfg=None, mid=None):
+    """由机器标识派生候选虚拟 IP（.2 ~ .253）。
+
+    旧实现从 .2 起按本机历史记录顺序占位，但那份记录只在本机，第二、第三个
+    好友各自的配置里都没有别人的记录，于是全都算到 .2 —— 三人房间必撞。
+    改成按机器标识散列，天然分散到不同尾号。"""
+    mid = mid or machine_id(cfg)
+    h = hashlib.sha256(("%s|%s" % (subnet, mid)).encode("utf-8")).hexdigest()
+    return "%s.%d" % (subnet, 2 + (int(h[6:10], 16) % 252))
+
+
 def suggest_ip(subnet, cfg):
-    used = set()
-    for r in cfg.get("rooms", {}).values():
-        if r.get("subnet") == subnet and r.get("my_ip"):
-            tail = r["my_ip"].rsplit(".", 1)[-1]
-            if tail.isdigit():
-                used.add(int(tail))
-    host = 2
-    while host in used and host < 255:
-        host += 1
-    return "%s.%d" % (subnet, host)
+    """兼容旧调用点：语义从「本地顺序占位」升级为「按机器分散」。"""
+    return pick_candidate_ip(subnet, cfg)
+
+
+# ----------------------------------------------------------------------------
+# 房主侧虚拟 IP 发号：没有中心服务器时，房主是唯一可靠的仲裁者
+# ----------------------------------------------------------------------------
+IP_ASSIGN_PORT = 23336
+IP_ASSIGN_TAG = "N2NLANIP"
+
+
+def parse_assign_msg(data):
+    """解析报文：N2NLANIP|REQ|房间码|机器标识   /   N2NLANIP|OK|房间码|IP"""
+    try:
+        text = data.decode("utf-8", "ignore").strip()
+    except Exception:
+        return None
+    parts = text.split("|")
+    if len(parts) != 4 or parts[0] != IP_ASSIGN_TAG:
+        return None
+    return parts[1], parts[2], parts[3]
+
+
+class IpAllocator:
+    """房主侧 IP 发号服务：绑虚拟网段 .1 的 UDP 端口，按序发号并持久化。
+
+    好友拿到号码后若与自己当前 IP 不同，会重启 edge 换成新 IP —— 从机制上
+    保证同一房间不会出现两个 .2。"""
+
+    def __init__(self):
+        self.sock = None
+        self.thread = None
+        self.running = False
+        self.subnet = ""
+        self.code = ""
+        self.map = {}
+        self.cfg = None
+        self.on_log = None
+
+    def start(self, subnet, code, cfg):
+        self.stop()
+        self.subnet = subnet
+        self.code = code
+        self.cfg = cfg
+        room = (cfg.get("rooms") or {}).get(code) or {}
+        self.map = {str(k): int(v) for k, v in (room.get("ip_map") or {}).items()
+                    if str(v).isdigit()}
+        sock = None
+        # 优先绑虚拟 IP，源地址才对得上；TAP 还没拿到地址时退到全部地址
+        for addr in ((subnet + ".1", IP_ASSIGN_PORT), ("0.0.0.0", IP_ASSIGN_PORT)):
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(addr)
+                sock = s
+                break
+            except OSError:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+        if sock is None:
+            return False
+        sock.settimeout(0.6)
+        self.sock = sock
+        self.running = True
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
+        return True
+
+    def _next_free(self):
+        used = set(int(v) for v in self.map.values())
+        for tail in range(2, 255):
+            if tail not in used:
+                return tail
+        return None
+
+    def _bank(self):
+        """分配表写回配置，房主重进同一房间时不重新发号"""
+        if not self.cfg:
+            return
+        try:
+            rooms = self.cfg.setdefault("rooms", {})
+            room = rooms.setdefault(self.code, {})
+            room["ip_map"] = dict(self.map)
+            room["subnet"] = self.subnet
+            save_config(self.cfg)
+        except Exception:
+            pass
+
+    def _loop(self):
+        while self.running:
+            try:
+                data, addr = self.sock.recvfrom(512)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            parsed = parse_assign_msg(data)
+            if not parsed:
+                continue
+            action, code, payload = parsed
+            if action != "REQ" or code != self.code:
+                continue
+            mid = payload.strip()
+            if not mid:
+                continue
+            ip = self._serve(mid)
+            if not ip:
+                continue
+            try:
+                self.sock.sendto(
+                    ("%s|OK|%s|%s" % (IP_ASSIGN_TAG, self.code, ip)).encode("utf-8"),
+                    addr)
+            except OSError:
+                pass
+
+    def _serve(self, mid):
+        """给一个机器标识发号（同一标识固定同一个号），返回 IP 字符串。"""
+        tail = self.map.get(mid)
+        if tail is None:
+            tail = self._next_free()
+            if tail is None:
+                return ""
+            self.map[mid] = tail
+            self._bank()
+            if self.on_log:
+                self.on_log("分配虚拟 IP %s.%d 给 %s" % (self.subnet, tail, mid[:8]))
+        return "%s.%d" % (self.subnet, tail)
+
+    def stop(self):
+        self.running = False
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            self.sock = None
+        self.thread = None
+
+
+def request_room_ip(subnet, code, mid, current_ip, timeout=22.0):
+    """好友侧：向房主 10.x.0.1 申请房间内唯一的虚拟 IP。
+
+    必须绑自己的虚拟 IP 发出，否则包会从物理网卡走、进不了虚拟网段。
+    返回房主分配的 IP（如 10.30.0.5）或 None。"""
+    if not subnet or not current_ip:
+        return None
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((current_ip, 0))
+        sock.settimeout(1.2)
+    except OSError:
+        return None
+    msg = ("%s|REQ|%s|%s" % (IP_ASSIGN_TAG, code, mid)).encode("utf-8")
+    deadline = time.time() + timeout
+    try:
+        while time.time() < deadline:
+            try:
+                sock.sendto(msg, (subnet + ".1", IP_ASSIGN_PORT))
+            except OSError:
+                pass
+            try:
+                data, _addr = sock.recvfrom(512)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            parsed = parse_assign_msg(data)
+            if parsed and parsed[0] == "OK" and parsed[1] == code:
+                return parsed[2].strip() or None
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+    return None
 
 
 def validate_ip(ip):
@@ -1020,10 +1229,18 @@ def install_tap_driver():
 
 
 def add_firewall_rule():
-    """放行 edge 入站。Windows：netsh；macOS/Linux：无 UI 弹窗则提示手动。"""
+    """放行 edge 与虚拟 IP 发号端口入站。Windows：netsh；macOS/Linux：无 UI 弹窗则提示手动。"""
     if IS_WINDOWS:
-        rule = 'advfirewall firewall add rule name="n2n edge room" dir=in action=allow program="%s"' % EDGE_EXE
-        return run_elevated("netsh", rule, wait=False)
+        cmds = [
+            'advfirewall firewall add rule name="n2n edge room" dir=in action=allow program="%s"' % EDGE_EXE,
+            # 发号是主程序自己监听，按端口放行（源码与打包路径不同，不能按 exe 放行）
+            'advfirewall firewall add rule name="n2n ip assign" dir=in action=allow protocol=UDP localport=%d'
+            % IP_ASSIGN_PORT,
+        ]
+        ok = True
+        for c in cmds:
+            ok = bool(run_elevated("netsh", c, wait=False)) and ok
+        return ok
     # macOS / Linux：应用防火墙一般会自行弹窗询问，无需（也难）预设规则
     return True
 
@@ -1420,6 +1637,37 @@ class EdgeSession:
                 pass
         return None
 
+    def start_server_forwarder(self, listen_port=DEFAULT_SUPERNODE_PORT, target_port=DEFAULT_SUPERNODE_PORT):
+        """房主走 IPv6 兜底时：对 IPv6 世界监听 listen_port，转发给本机 supernode。
+        supernode 本身只监听 IPv4，这个反向转发器就是那道门。
+        返回 True / False。"""
+        if IS_WINDOWS:
+            if not os.path.exists(FORWARDER_EXE):
+                return False
+            fw_cmd = [FORWARDER_EXE]
+        else:
+            if not os.path.exists(FORWARDER_PY):
+                return False
+            py = sys.executable or "python3"
+            fw_cmd = [py, FORWARDER_PY]
+        try:
+            p = subprocess.Popen(
+                fw_cmd + ["--server", str(listen_port), str(target_port)],
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WINDOWS else 0,
+            )
+        except Exception:
+            return False
+        # 轮询确认转发器没在一开始就退出（IPv6 端口被占、栈不可用等）
+        deadline = time.time() + 6
+        while time.time() < deadline:
+            if p.poll() is not None:
+                return False
+            time.sleep(0.4)
+        if p.poll() is None:
+            self.fw_procs.append(p)
+            return True
+        return False
+
     def start(self, community, key, ip, supernode_list):
         self.stop()
         os.makedirs(LOG_DIR, exist_ok=True)
@@ -1523,7 +1771,8 @@ def plan_host_network(cfg=None, port=DEFAULT_SUPERNODE_PORT, local6=None):
     实测结论：内置 supernode 只监听 IPv4（不支持 IPv6 绑定），
     所以房主自建服务器必须走「公网 IPv4 + 端口可达」。
     优先级：高级自定义 > 公共节点 > 公网 IPv4（UPnP 自动映射）> 公网 IPv4（需路由器手动转发）
-    返回 {"mode": "custom"|"public"|"v4"|"manual"|"none", "server": str, "detail": str, "lan_ip": str}
+            > 公网 IPv6（本机 supernode + IPv6 反向转发器）> 同局域网直连
+    返回 {"mode": "custom"|"public"|"v4"|"manual"|"v6"|"lan"|"none", "server": str, "detail": str, "lan_ip": str}
     """
     cfg = cfg or {}
     lan = get_primary_local_ip()
@@ -1548,7 +1797,30 @@ def plan_host_network(cfg=None, port=DEFAULT_SUPERNODE_PORT, local6=None):
         # 有公网地址但路由器没开 UPnP：让用户做一次手动端口转发即可长期可用
         return {"mode": "manual", "server": "%s:%d" % (pub4, port), "detail": info, "lan_ip": lan}
 
-    return {"mode": "none", "server": "", "detail": "cgnat/no public ipv4", "lan_ip": lan}
+    # —— 没有公网 IPv4，开始兜底 ——
+    # 兜底一：公网 IPv6。supernode 仍在本机跑（0.0.0.0:7654），
+    # 由 IPv6 反向转发器对 IPv6 世界开门；好友侧用现成的 udp6 转发器连。
+    v6 = ""
+    try:
+        v6, _ = fetch_public_ip(6)
+    except Exception:
+        v6 = ""
+    if not v6:
+        try:
+            pool = list(local6 or []) or list(get_local_ipv6s())
+        except Exception:
+            pool = []
+        cands = [ip for ip in pool if is_public_ipv6(ip)]
+        v6 = sorted(cands)[0] if cands else ""
+    if v6:
+        return {"mode": "v6", "server": v6, "detail": "public ipv6", "lan_ip": lan}
+
+    # 兜底二：同一局域网内直连（两边在同一个路由器/WiFi 下，不依赖公网）
+    if lan:
+        return {"mode": "lan", "server": "%s:%d" % (lan, port),
+                "detail": "same lan only", "lan_ip": lan}
+
+    return {"mode": "none", "server": "", "detail": "no reachable path", "lan_ip": lan}
 
 
 def firewall_rule_ready(name="n2n edge room"):
@@ -1573,7 +1845,7 @@ def prepare_system():
     if not IS_WINDOWS:
         return "already" if tap_driver_installed() else "manual"
 
-    names = ("n2n edge room", "n2n supernode")
+    names = ("n2n edge room", "n2n supernode", "n2n ip assign")
     need_driver = not tap_driver_installed()
     need_fw = not all(firewall_rule_ready(n) for n in names)
     if not need_driver and not need_fw:
@@ -1589,6 +1861,11 @@ def prepare_system():
             lines.append(
                 'netsh advfirewall firewall add rule name="%s" dir=in action=allow program="%s" enable=yes'
                 % (name, exe))
+        # 虚拟 IP 发号是主程序自己在监听，不能按 exe 放行（源码与打包路径不同），
+        # 按端口放行最稳：好友进房时会往 10.x.0.1:23336 发请求。
+        lines.append(
+            'netsh advfirewall firewall add rule name="n2n ip assign" dir=in action=allow '
+            'protocol=UDP localport=%d enable=yes' % IP_ASSIGN_PORT)
 
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
@@ -1647,6 +1924,10 @@ class App:
             self.cfg["auto_broadcast"] = True
         self.session = EdgeSession(self)
         self.host_sn = HostSupernode()
+        self.ip_alloc = IpAllocator()
+        self._is_host = False
+        self._ip_asked = False
+        self._v6_gateway_up = False
         self.local_ipv6s = set()
         self._connected = None
         self._params = None
@@ -1759,6 +2040,7 @@ class App:
         self._set_state("failed", note or tr("fail_final"))
         self.session.stop()
         self.host_sn.stop()
+        self.ip_alloc.stop()
         self._connected = None
 
     # ---------------- 房主流程 ----------------
@@ -1770,6 +2052,9 @@ class App:
         self.btn_join.configure(state="disabled")
         self._set_state("preparing", tr("prep_driver"))
         self._retry_done = False
+        self._is_host = True
+        self._ip_asked = False
+        self._v6_gateway_up = False
         params = code_to_params(gen_short_code())
         snapshot = dict(self.cfg)
         threading.Thread(target=self._host_flow, args=(params, snapshot), daemon=True).start()
@@ -1803,7 +2088,7 @@ class App:
             server = plan["server"]
             mode = plan["mode"]
             self._plan_lan = plan.get("lan_ip", "")
-            if mode in ("v4", "manual"):
+            if mode in ("v4", "manual", "v6", "lan"):
                 ui(lambda: self._set_state("preparing", tr("prep_server")))
                 stt = self.host_sn.start()
                 if stt in ("fail", "missing"):
@@ -1815,9 +2100,9 @@ class App:
                     server = ",".join(nodes)
             self._host_mode = mode
             invite = make_invite(params["code"], server)
-            # 服务器就在本机：自己走回环，好友走公网地址（邀请码里带公网地址）
+            # 服务器就在本机：自己走回环，好友走公网/局域网地址（邀请码里带这个地址）
             connect_server = server
-            if mode in ("v4", "manual"):
+            if mode in ("v4", "manual", "v6", "lan"):
                 connect_server = "127.0.0.1:%d" % DEFAULT_SUPERNODE_PORT
             ui(lambda: self._start_edge(params, connect_server, invite))
         except Exception as e:
@@ -1828,7 +2113,7 @@ class App:
         """prepare_system() 之后的兜底：规则缺失才补一次（正常不会触发）"""
         if not IS_WINDOWS:
             return True
-        names = ("n2n edge room", "n2n supernode")
+        names = ("n2n edge room", "n2n supernode", "n2n ip assign")
         if all(firewall_rule_ready(n) for n in names):
             return True
         try:
@@ -1867,6 +2152,9 @@ class App:
         self.btn_host.configure(state="disabled")
         self.btn_join.configure(state="disabled")
         self._retry_done = False
+        self._is_host = False
+        self._ip_asked = False
+        self._v6_gateway_up = False
         self._set_state("preparing", tr("prep_driver"))
         server = parsed.get("server") or ""
         threading.Thread(target=self._join_flow, args=(params, server), daemon=True).start()
@@ -1893,7 +2181,7 @@ class App:
                 elif nodes:
                     server = ",".join(nodes)
                 else:
-                    ui(lambda: self._finish_fail(tr("no_public_net")))
+                    ui(lambda: self._finish_fail(tr("no_server_hint")))
                     return
 
             self._host_mode = "public"
@@ -1920,6 +2208,19 @@ class App:
         self._connected = {"community": params["community"], "code": params["code"],
                            "ip": params["host_ip"], "server": server}
         self.chat_listener.set_room(params["community"])
+        if self._is_host and self._host_mode == "v6":
+            self._start_v6_gateway()
+
+    def _start_v6_gateway(self):
+        """IPv6 兜底：supernode 只监听 IPv4，这里对 IPv6 世界开门。"""
+        if self._v6_gateway_up:
+            return
+        ok = self.session.start_server_forwarder(DEFAULT_SUPERNODE_PORT, DEFAULT_SUPERNODE_PORT)
+        self._v6_gateway_up = bool(ok)
+        if ok:
+            self.append_log(tr("log_v6_gateway", port=DEFAULT_SUPERNODE_PORT))
+        else:
+            self.append_log(tr("log_v6_gateway_fail"))
 
     def _on_edge_log(self, line):
         """edge 日志 → 人话状态机（后台线程调用）"""
@@ -1943,6 +2244,10 @@ class App:
             note = tr("host_mode_manual", lan=self._plan_lan or tr("lan_unknown"))
         elif mode == "v4":
             note = tr("host_mode_v4")
+        elif mode == "v6":
+            note = tr("host_mode_v6")
+        elif mode == "lan":
+            note = tr("host_mode_lan")
         else:
             note = tr("host_mode_public")
         self._set_state("connected", note)
@@ -1954,6 +2259,69 @@ class App:
             subnet = ""
         host_ip = (subnet + ".1") if subnet else ""
         self.lbl_mc.configure(text=tr("mc_addr", ip=host_ip) if host_ip else "")
+        # 房主负责发号；好友去领号，避免所有人挤在同一个虚拟 IP 上
+        if self._is_host:
+            self._start_ip_allocator()
+        else:
+            self._request_ip_async()
+
+    def _start_ip_allocator(self):
+        """房主开始发号：绑 .1 的 UDP 端口，好友来领唯一尾号。"""
+        params = self._params or {}
+        subnet = params.get("subnet") or ""
+        code = params.get("code") or ""
+        if not subnet or not code or self.ip_alloc.running:
+            return
+        self.ip_alloc.on_log = self.append_log
+        if self.ip_alloc.start(subnet, code, self.cfg):
+            self.append_log(tr("log_alloc_up", ip=subnet + ".1", port=IP_ASSIGN_PORT))
+        else:
+            self.append_log(tr("log_alloc_fail"))
+
+    def _request_ip_async(self):
+        """好友领号：拿到与当前不同的 IP 就换号重连，从机制上消灭 .2 撞车。"""
+        if self._ip_asked:
+            return
+        self._ip_asked = True
+        params = self._params or {}
+        subnet = params.get("subnet") or ""
+        code = params.get("code") or ""
+        current = params.get("host_ip") or ""
+        if not subnet or not code or not current:
+            return
+        mid = machine_id(self.cfg)
+
+        def work():
+            ip = request_room_ip(subnet, code, mid, current, timeout=22.0)
+            if not ip or ip == current or not validate_ip(ip):
+                return
+            try:
+                self.root.after(0, lambda: self._switch_ip(ip, current))
+            except Exception:
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _switch_ip(self, new_ip, old_ip):
+        """房主发了别的号：用新 IP 重启 edge（同一房间码、同一服务器）。"""
+        if self._busy or not self.session.running:
+            return
+        params = self._params or {}
+        if params.get("host_ip") == new_ip:
+            return
+        self.append_log(tr("log_ip_switch", new=new_ip, old=old_ip))
+        params["host_ip"] = new_ip
+        if self._connected:
+            self._connected["ip"] = new_ip
+        server = (self._connected or {}).get("server") or ""
+        self._pending_ok = False
+        self._connect_deadline = time.time() + 40
+        try:
+            self.session.stop()
+            self.session.start(params["community"], params["key"], new_ip,
+                               [s for s in server.split(",") if s.strip()])
+        except Exception as e:
+            self._finish_fail(str(e))
 
     def _tick(self):
         if self._connected and not self._pending_ok and time.time() > self._connect_deadline:
@@ -1998,7 +2366,7 @@ class App:
             if mode == "none" or not server:
                 ui(lambda: self._finish_fail(tr("no_public_net")))
                 return
-            if mode in ("v4", "manual"):
+            if mode in ("v4", "manual", "v6", "lan"):
                 stt = self.host_sn.start()
                 if stt in ("fail", "missing"):
                     nodes = [n.strip() for n in (cfg.get("public_nodes") or []) if n.strip()]
@@ -2008,7 +2376,7 @@ class App:
                     server, mode = ",".join(nodes), "public"
             self._host_mode = mode
             connect_server = server
-            if mode in ("v4", "manual"):
+            if mode in ("v4", "manual", "v6", "lan"):
                 connect_server = "127.0.0.1:%d" % DEFAULT_SUPERNODE_PORT
             ui(lambda: self._start_edge(self._params, connect_server,
                                         make_invite(self._params["code"], server)))
@@ -2023,6 +2391,7 @@ class App:
             return
         self.session.stop()
         self.host_sn.stop()
+        self.ip_alloc.stop()
         self._connected = None
         self._busy = False
         self.chat_listener.clear_room()

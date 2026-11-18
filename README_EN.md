@@ -4,7 +4,7 @@
 
 ## Zero: three steps (most players only need this)
 
-1. **Download and install** `n2n-lan-setup-1.1.0.exe`. You get a desktop shortcut with the app icon, and the installer ships its own uninstaller.
+1. **Download and install** `n2n-lan-setup-1.2.0.exe`. You get a desktop shortcut with the app icon, and the installer ships its own uninstaller.
 2. **The host clicks "Create room".** The client installs the virtual adapter, allows the firewall rule and picks a server on its own. A few seconds later the status turns to Connected and you get an **8-character invite code** (e.g. `4Z9G-VLDK`, copyable and with a QR code).
 3. **The friend pastes the code and clicks "Join".** Both sides show Connected.
 
