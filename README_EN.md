@@ -4,9 +4,11 @@
 
 ## Zero: three steps (most players only need this)
 
-1. **Download and install** `n2n-lan-setup-1.2.0.exe`. You get a desktop shortcut with the app icon, and the installer ships its own uninstaller.
+1. **Download and install** `n2n-lan-setup-1.2.1.exe`. You get a desktop shortcut with the app icon, and the installer ships its own uninstaller.
 2. **The host clicks "Create room".** The client installs the virtual adapter, allows the firewall rule and picks a server on its own. A few seconds later the status turns to Connected and you get an **8-character invite code** (e.g. `4Z9G-VLDK`, copyable and with a QR code).
 3. **The friend pastes the code and clicks "Join".** Both sides show Connected.
+
+> The client checks GitHub for a newer release on startup (once per 24 hours, silently in the background). When one exists, a banner appears at the top with a Download button and a "don't remind me for this version" option. The version button in the header (`版本 v1.2.1`) runs a manual check.
 
 Then, in Minecraft: the host clicks "Open to LAN" → the world shows up directly in your
 friend's Multiplayer list. If the list is stale, use Direct Connect with `10.x.0.1:25565`.
