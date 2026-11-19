@@ -43,6 +43,19 @@
     padding:6px 14px; border-radius:8px; font-size:14px;
   }
   .nav-links .gh:hover{text-decoration:none; border-color:var(--accent)}
+  .nav-links .pro{
+    color:#E4655F; background:rgba(228,101,95,.10); border:1px solid rgba(228,101,95,.5);
+    padding:6px 14px; border-radius:8px; font-size:14px; font-weight:600;
+  }
+  .nav-links .pro:hover{text-decoration:none; background:rgba(228,101,95,.18); border-color:#E4655F}
+  .pro-banner{
+    margin:0 0 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(90deg,rgba(228,101,95,.10),rgba(228,101,95,.02));
+    border:1px solid rgba(228,101,95,.35); border-radius:12px; padding:16px 20px;
+  }
+  .pro-banner .txt{flex:1; min-width:260px}
+  .pro-banner .txt b{display:block; font-size:15.5px; color:#E4655F; margin-bottom:2px}
+  .pro-banner .txt span{font-size:13.5px; color:var(--muted)}
   .lang-btn{
     background:transparent; color:var(--accent); border:1px solid rgba(99,199,77,.4);
     padding:6px 14px; border-radius:8px; font-size:14px; cursor:pointer;
@@ -202,6 +215,7 @@
       <a href="#start" data-i18n="nav-start">快速开始</a>
       <a href="#download" data-i18n="nav-download">下载</a>
       <a href="#faq" data-i18n="nav-faq">常见问题</a>
+      <a class="pro" href="https://zgs7157.github.io/n2n-lan-pro/" data-i18n="nav-pro">Pro 版 ↗</a>
       <a class="gh" href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="nav-gh">GitHub</a>
       <button class="lang-btn" id="langBtn" aria-label="Switch language">English</button>
     </div>
@@ -408,6 +422,13 @@
       <h2 data-i18n="dl-title">下载</h2>
       <p data-i18n="dl-sub">本站可直接下载，也可复制直链交给 IDM / 迅雷 / aria2 等下载工具；源码与完整文档在仓库中。</p>
     </div>
+    <div class="pro-banner">
+      <div class="txt">
+        <b data-i18n="pro-banner-t">N2N LAN Pro 专业版</b>
+        <span data-i18n="pro-banner-p">在免费版之上加了网络诊断、连接审计、房间库与高级参数；房间码与免费版互通，可与免费版并存安装。</span>
+      </div>
+      <a class="btn ghost" href="https://zgs7157.github.io/n2n-lan-pro/" data-i18n="pro-banner-btn">看看 Pro 版 →</a>
+    </div>
     <div class="dl">
       <div class="dl-box">
         <h3 data-i18n="dl1-t">Windows 安装程序（推荐）</h3>
@@ -472,6 +493,7 @@
     <div class="license" data-i18n="foot-license">MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源</div>
     <div class="links">
       <a href="https://github.com/zgs7157/n2n-lan" target="_blank" rel="noopener" data-i18n="foot-gh">GitHub</a>
+      <a href="https://zgs7157.github.io/n2n-lan-pro/" data-i18n="foot-pro">Pro 版</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README.md" target="_blank" rel="noopener" data-i18n="foot-doc">文档</a>
       <a href="https://github.com/zgs7157/n2n-lan/blob/main/README_EN.md" target="_blank" rel="noopener">English</a>
     </div>
@@ -491,6 +513,8 @@
       "doc-title":"n2n 房间式虚拟局域网 — MC 异地联机工具",
       "logo":"n2n 房间 LAN",
       "nav-features":"特性","nav-how":"工作原理","nav-start":"快速开始","nav-download":"下载","nav-faq":"常见问题","nav-gh":"GitHub",
+      "nav-pro":"Pro 版 ↗",
+      "pro-banner-t":"N2N LAN Pro 专业版","pro-banner-p":"在免费版之上加了网络诊断、连接审计、房间库与高级参数；房间码与免费版互通，可与免费版并存安装。","pro-banner-btn":"看看 Pro 版 →",
       "kicker":"N2N · 房间式虚拟局域网",
       "hero-h1-1":"把远方的电脑，","hero-h1-2":"变成","hero-h1-3":"同一个房间",
       "hero-sub":"不同网络的两台电脑，点一下「创建房间」就进到同一个虚拟局域网——不用公网服务器、不用懂端口映射，\n    在游戏眼里你们就在同一张局域网里。专为 MC 等支持局域网模式的游戏异地联机而做。",
@@ -528,12 +552,14 @@
       "q2-t":"为什么不能只把 exe 发给朋友？","q2-p":"不用了，现在直接把安装包发给对方装上就行（绿色版 zip 也行）。exe 仍需同目录的 bin/（edge 引擎）、driver/（TAP 虚拟网卡驱动）、tools/ 才能工作，所以别只单独拷一个 exe。",
       "q3-t":"双方都显示「已连接」但游戏里看不到对方？","q3-p":"先确认两边用的是同一条 8 位邀请码（输错一位就是另一个房间，自然互相看不见）；再确认 MC 版本与模组完全一致。仍然看不到，就在「多人游戏 → 直接连接」里填 10.x.0.1:25565，绕开局域网自动发现。",
       "q4-t":"一个房间能进几个人？","q4-p":"官方 supernode 引擎本身不限制人数，实际体验建议控制在 8 人以内：人多时一部分流量会走服务器中转，房主的上传带宽更容易成为瓶颈。客户端也不强制限流，这一点如实说明。",
-      "foot-license":"MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源","foot-gh":"GitHub","foot-doc":"文档"
+      "foot-license":"MIT License · 基于 n2n (GPLv3) 与 OpenVPN TAP 驱动 (GPLv2) · 本页与项目同源开源","foot-gh":"GitHub","foot-pro":"Pro 版","foot-doc":"文档"
     },
     en: {
       "doc-title":"N2N Room LAN — Minecraft co-op over the Internet",
       "logo":"n2n Room LAN",
       "nav-features":"Features","nav-how":"How it works","nav-start":"Quick start","nav-download":"Download","nav-faq":"FAQ","nav-gh":"GitHub",
+      "nav-pro":"Pro Edition ↗",
+      "pro-banner-t":"N2N LAN Pro","pro-banner-p":"Adds network diagnostics, connection audit, a room library and advanced parameters on top of the free edition — same 8-char room codes, installs side by side.","pro-banner-btn":"Explore Pro →",
       "kicker":"N2N · Room-style Virtual LAN",
       "hero-h1-1":"Turn distant computers","hero-h1-2":"into ","hero-h1-3":"one room",
       "hero-sub":"Two PCs on different networks. Click \"Create room\" and you're on the same virtual LAN — no public server, no port-forwarding knowledge needed.\n    To the game, you're simply on one LAN. Built for Minecraft-style LAN multiplayer.",
@@ -571,7 +597,7 @@
       "q2-t":"Why can't I just send my friend the exe?","q2-p":"Not needed anymore: just send the installer (or the portable zip). The exe still needs bin/ (edge engine), driver/ (TAP adapter) and tools/ next to it, so never copy the exe alone.",
       "q3-t":"Both show \"Connected\" but we can't see each other in-game?","q3-p":"First make sure both sides use the exact same 8-character code (one wrong character means a different room). Then check the Minecraft version and mods match. If it still doesn't show, use Multiplayer → Direct Connect with 10.x.0.1:25565 to skip LAN discovery.",
       "q4-t":"How many players per room?","q4-p":"The upstream supernode engine sets no hard limit, but staying within 8 players is recommended: with more people part of the traffic goes through the relay and the host's upload becomes the bottleneck. The client does not enforce a cap, and we say so plainly.",
-      "foot-license":"MIT License · built on n2n (GPLv3) & OpenVPN TAP driver (GPLv2) · this page is open source like the project","foot-gh":"GitHub","foot-doc":"Docs"
+      "foot-license":"MIT License · built on n2n (GPLv3) & OpenVPN TAP driver (GPLv2) · this page is open source like the project","foot-gh":"GitHub","foot-pro":"Pro edition","foot-doc":"Docs"
     }
   };
 
