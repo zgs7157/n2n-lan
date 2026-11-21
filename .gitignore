@@ -37,3 +37,7 @@ _build_tmp/
 
 # PyInstaller 中间目录
 build_tmp/
+
+# PyInstaller 产物目录
+/build/
+/dist/

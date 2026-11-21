@@ -45,6 +45,12 @@ try:
 except Exception:
     HAS_QR = False
 
+# 房间在线成员 / 局域网房间发现（纯标准库，缺失时功能静默降级）
+try:
+    import room_presence
+except Exception:
+    room_presence = None
+
 # ----------------------------------------------------------------------------
 # 平台判断
 # ----------------------------------------------------------------------------
@@ -84,7 +90,7 @@ MC_PORT = 25565            # 我的世界 Java 版默认端口
 MAX_ROOM_PLAYERS = 8       # 建议人数上限（仅提示，n2n 层不强制）
 
 # 版本号与在线更新（与 setup_n2n.iss 的 MyAppVersion、Release tag 保持一致）
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 UPDATE_REPO = "zgs7157/n2n-lan"
 UPDATE_API = "https://api.github.com/repos/%s/releases/latest" % UPDATE_REPO
 UPDATE_PAGE = "https://github.com/%s/releases/latest" % UPDATE_REPO
@@ -490,6 +496,30 @@ LANG_EN = {
 }
 
 LANGUAGES = {"zh": LANG_ZH, "en": LANG_EN}
+
+# 房间成员面板文案（两版共用，追加在字典末尾，不改动原有键）
+LANG_ZH.update({
+    "members_fmt": "房间成员 %(n)d 人 · 房主 %(host)s",
+    "members_alone": "房间成员 1 人（只有你自己）",
+    "col_ip": "虚拟 IP",
+    "col_role": "角色",
+    "col_name": "名称",
+    "role_host": "房主",
+    "role_guest": "成员",
+    "member_self_suffix": "（我）",
+    "members_wait": "正在收集房间成员…",
+})
+LANG_EN.update({
+    "members_fmt": "%(n)d in room · host %(host)s",
+    "members_alone": "1 in room (just you)",
+    "col_ip": "Virtual IP",
+    "col_role": "Role",
+    "col_name": "Name",
+    "role_host": "Host",
+    "role_guest": "Member",
+    "member_self_suffix": " (me)",
+    "members_wait": "Collecting room members…",
+})
 
 # 当前语言（启动时由 App 按配置/系统语言设置）
 _lang = "zh"
@@ -1948,6 +1978,58 @@ def firewall_rule_ready(name="n2n edge room"):
         return False
 
 
+def _win_proc_list(name):
+    """Windows：列出指定进程名的 (pid, 可执行路径)。失败返回空列表。"""
+    try:
+        out = subprocess.run(
+            ["wmic", "process", "where", "name='%s'" % name,
+             "get", "ProcessId,ExecutablePath", "/format:csv"],
+            capture_output=True, text=True, timeout=8).stdout
+    except Exception:
+        return []
+    rows = []
+    for line in (out or "").splitlines()[1:]:
+        parts = [p.strip() for p in line.split(",")]
+        # csv 列序：Node,ExecutablePath,ProcessId
+        if len(parts) >= 3 and parts[2].isdigit():
+            rows.append((int(parts[2]), parts[1]))
+    return rows
+
+
+def cleanup_stale_children():
+    """收拾上次异常退出（被强杀 / 崩溃）留下的 edge、supernode 孤儿进程。
+
+    这些孤儿会一直占着 TAP 网卡和 UDP 7654，导致之后"建房"时 edge 打不开设备、
+    supernode 起不来，表现就是"无法设立房间"。本程序启动时房间里必然没有自己的
+    edge，所以只清理可执行文件位于本程序目录下的那些，不会误伤别人的 n2n。
+    返回被清理的 ["edge.exe(1234)", ...]。
+    """
+    if not IS_WINDOWS:
+        return []
+    killed = []
+    try:
+        root_norm = os.path.normcase(os.path.abspath(BASE_DIR)).rstrip("\\") + "\\"
+    except Exception:
+        return []
+    for name in ("edge.exe", "supernode.exe"):
+        for pid, path in _win_proc_list(name):
+            if not path:
+                continue
+            try:
+                p_norm = os.path.normcase(os.path.abspath(path))
+            except Exception:
+                continue
+            if not p_norm.startswith(root_norm):
+                continue
+            try:
+                subprocess.run(["taskkill", "/PID", str(pid), "/F"],
+                               capture_output=True, timeout=6)
+                killed.append("%s(%d)" % (name, pid))
+            except Exception:
+                pass
+    return killed
+
+
 def prepare_system():
     """首次开房时一次性提权：装虚拟网卡驱动 + 放行 edge / supernode 入站。
     普通用户只会看到一次 UAC 确认，之后不再打扰。
@@ -2024,6 +2106,9 @@ class App:
 
     def __init__(self, root):
         self.root = root
+        # 先清掉上次异常退出留下的 edge/supernode 孤儿，否则它们占着 TAP 和 7654，
+        # 这一轮"创建房间"必然失败（表现为点建房后卡住/连不上）
+        self._stale_killed = cleanup_stale_children()
         self.cfg = load_config()
         if not self.cfg.get("mc_mode", True):
             self.cfg["use_multicast"] = False
@@ -2056,6 +2141,17 @@ class App:
         self._chat_cache = []
         self.chat_listener = ChatListener(self.on_chat_msg)
         self.chat_listener.start()
+        # 房间在线成员：进房后在虚拟网段广播自己，所有人互相看得见
+        self.presence = None
+        self.mem_tree = None
+        self.lbl_members = None
+        self._members_last_ui = 0.0
+        if room_presence is not None:
+            self.presence = room_presence.PresenceService(self._presence_name)
+            try:
+                self.presence.start()
+            except Exception:
+                self.presence = None
         # 在线更新：发现新版后在窗口顶部显示提示条
         self._latest_tag = ""
         self._latest_url = ""
@@ -2068,8 +2164,8 @@ class App:
             _lang = "en"
 
         root.title(tr("app_title"))
-        root.geometry("780x600")
-        root.minsize(700, 520)
+        root.geometry("820x720")
+        root.minsize(740, 620)
 
         self._build_ui()
         self._tick()
@@ -2137,6 +2233,26 @@ class App:
                   wraplength=640, justify="left").pack(anchor="w", padx=10)
         self.lbl_mc = tk.Label(self.card, text="", font=("Consolas", 11), fg="#333")
         self.lbl_mc.pack(anchor="w", padx=10, pady=(4, 0))
+
+        # ---- 房间成员：人数 / 虚拟 IP / 角色 / 名称 ----
+        self.lbl_members = tk.Label(self.card, text=tr("members_wait"),
+                                    font=("", 9), fg="#555", anchor="w")
+        self.lbl_members.pack(anchor="w", padx=10, pady=(8, 2))
+        mem_box = ttk.Frame(self.card)
+        mem_box.pack(fill="x", padx=10)
+        self.mem_tree = ttk.Treeview(mem_box, columns=("ip", "role", "name"),
+                                     show="headings", height=3)
+        self.mem_tree.heading("ip", text=tr("col_ip"))
+        self.mem_tree.heading("role", text=tr("col_role"))
+        self.mem_tree.heading("name", text=tr("col_name"))
+        self.mem_tree.column("ip", width=128, anchor="w", stretch=False)
+        self.mem_tree.column("role", width=64, anchor="center", stretch=False)
+        self.mem_tree.column("name", width=240, anchor="w")
+        mem_sb = ttk.Scrollbar(mem_box, orient="vertical", command=self.mem_tree.yview)
+        self.mem_tree.configure(yscrollcommand=mem_sb.set)
+        self.mem_tree.pack(side="left", fill="x", expand=True)
+        mem_sb.pack(side="right", fill="y")
+        self.mem_tree.tag_configure("host", foreground="#b3261e")
         crow = ttk.Frame(self.card)
         crow.pack(fill="x", padx=10, pady=8)
         ttk.Button(crow, text=tr("copy_invite"), command=self.copy_invite).pack(side="left")
@@ -2474,6 +2590,91 @@ class App:
             self._start_ip_allocator()
         else:
             self._request_ip_async()
+        self._sync_presence()
+
+    # ---------------- 房间在线成员 ----------------
+    def _presence_name(self):
+        """给成员表用的显示名：只读配置，绝不写盘（presence 每 3 秒取一次）"""
+        try:
+            name = (self.cfg.get("username") or "").strip()
+        except Exception:
+            name = ""
+        if not name:
+            try:
+                name = socket.gethostname()[:16]
+            except Exception:
+                name = ""
+        return name
+
+    def _sync_presence(self):
+        """把当前房间信息同步给 presence 广播（连上、换 IP 后都要调）"""
+        if self.presence is None:
+            return
+        params = self._params or {}
+        server = ""
+        invite = self._invite or ""
+        if "@" in invite:
+            server = invite.split("@", 1)[1].strip()
+        try:
+            self.presence.set_room(community=params.get("community") or "",
+                                   code=params.get("code") or "",
+                                   subnet=params.get("subnet") or "",
+                                   my_ip=params.get("host_ip") or "",
+                                   is_host=bool(self._is_host),
+                                   name=self._presence_name(),
+                                   server=server,
+                                   version=APP_VERSION)
+        except Exception:
+            pass
+        self._refresh_members()
+
+    def _refresh_members(self):
+        """把 presence 快照画到成员表上（UI 线程调用）"""
+        if self.mem_tree is None or self.lbl_members is None:
+            return
+        if self.presence is None:
+            try:
+                self.lbl_members.configure(text=tr("members_wait"))
+            except Exception:
+                pass
+            return
+        try:
+            rows = self.presence.snapshot()
+        except Exception:
+            rows = []
+        n = len(rows)
+        host_ip = ""
+        for r in rows:
+            if r.get("role") == "host":
+                host_ip = r.get("ip") or ""
+                break
+        try:
+            if n <= 1:
+                self.lbl_members.configure(text=tr("members_alone") if self._connected
+                                           else tr("members_wait"))
+            else:
+                self.lbl_members.configure(text=tr("members_fmt", n=n,
+                                                   host=host_ip or "—"))
+        except Exception:
+            pass
+        try:
+            self.mem_tree.delete(*self.mem_tree.get_children())
+        except Exception:
+            return
+        for r in rows:
+            ip = r.get("ip") or "—"
+            is_host = r.get("role") == "host"
+            name = r.get("name") or "—"
+            if r.get("self"):
+                name += tr("member_self_suffix")
+            try:
+                self.mem_tree.insert("", "end",
+                                     values=(ip,
+                                             tr("role_host") if is_host else tr("role_guest"),
+                                             name),
+                                     tags=("host",) if is_host else ())
+            except Exception:
+                break
 
     def _start_ip_allocator(self):
         """房主开始发号：绑 .1 的 UDP 端口，好友来领唯一尾号。"""
@@ -2532,10 +2733,25 @@ class App:
                                [s for s in server.split(",") if s.strip()])
         except Exception as e:
             self._finish_fail(str(e))
+            return
+        if self.presence is not None:
+            try:
+                self.presence.set_my_ip(new_ip)
+            except Exception:
+                pass
+        self._sync_presence()
 
     def _tick(self):
         if self._connected and not self._pending_ok and time.time() > self._connect_deadline:
             self._on_timeout()
+        # 成员表每 2.5 秒刷新一次（presence 内部 3 秒一轮广播）
+        try:
+            if (self._connected and self.mem_tree is not None
+                    and time.time() - self._members_last_ui >= 2.5):
+                self._members_last_ui = time.time()
+                self._refresh_members()
+        except Exception:
+            pass
         try:
             self.root.after(1500, self._tick)
         except Exception:
@@ -2605,6 +2821,17 @@ class App:
         self._connected = None
         self._busy = False
         self.chat_listener.clear_room()
+        if self.presence is not None:
+            try:
+                self.presence.clear_room()
+            except Exception:
+                pass
+        if self.mem_tree is not None:
+            try:
+                self.mem_tree.delete(*self.mem_tree.get_children())
+                self.lbl_members.configure(text=tr("members_wait"))
+            except Exception:
+                pass
         if self.chat_win is not None:
             self._close_chat()
         if self.card.winfo_ismapped():

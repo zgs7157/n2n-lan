@@ -1,7 +1,7 @@
 ; n2n-lan 房间管理器 安装脚本（Inno Setup 6）
 ; 编译：ISCC.exe setup_n2n.iss
 #define MyAppName "n2n-lan 房间管理器"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.2"
 #define MyAppPublisher "n2n-lan"
 #define MyAppURL "https://zgs7157.github.io/n2n-lan/"
 #define MyAppExeName "n2n_room_manager.exe"
@@ -16,7 +16,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}releases
-VersionInfoVersion=1.2.1.0
+VersionInfoVersion=1.2.2.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription={#MyAppName} 安装程序
 VersionInfoProductName={#MyAppName}
@@ -50,7 +50,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; 客户端全部内容：exe、bin（edge/supernode/udp6 转发器）、TAP 驱动、源码、mac/linux 脚本
-Source: "client\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "logs\*,config.json,n2n_room_manager_old_noipv6.exe,edge_lucktu_nov6.bak.exe,__pycache__\*,*.pyc,*.bak,tools\WinIPBroadcast.exe"
+Source: "client\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "logs\*,logs_pro\*,audit_reports\*,config.json,config_pro.json,n2n_room_manager_old_noipv6.exe,edge_lucktu_nov6.bak.exe,__pycache__\*,*.pyc,*.bak,tools\WinIPBroadcast.exe"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "n2n-lan 局域网联机组网客户端"
