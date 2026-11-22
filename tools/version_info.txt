@@ -14,12 +14,12 @@ VSVersionInfo(
       StringTable('040904B0', [
         StringStruct('CompanyName', 'n2n-lan'),
         StringStruct('FileDescription', 'n2n-lan Room Manager'),
-        StringStruct('FileVersion', '1.2.2.0'),
+        StringStruct('FileVersion', '1.2.3.0'),
         StringStruct('InternalName', 'n2n_room_manager'),
         StringStruct('LegalCopyright', 'MIT License'),
         StringStruct('OriginalFilename', 'n2n_room_manager.exe'),
         StringStruct('ProductName', 'n2n-lan Room Manager'),
-        StringStruct('ProductVersion', '1.2.2.0')
+        StringStruct('ProductVersion', '1.2.3.0')
       ])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])

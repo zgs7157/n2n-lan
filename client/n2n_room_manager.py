@@ -32,6 +32,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import webbrowser
 import xml.etree.ElementTree as ET
 
 import tkinter as tk
@@ -90,7 +91,7 @@ MC_PORT = 25565            # 我的世界 Java 版默认端口
 MAX_ROOM_PLAYERS = 8       # 建议人数上限（仅提示，n2n 层不强制）
 
 # 版本号与在线更新（与 setup_n2n.iss 的 MyAppVersion、Release tag 保持一致）
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 UPDATE_REPO = "zgs7157/n2n-lan"
 UPDATE_API = "https://api.github.com/repos/%s/releases/latest" % UPDATE_REPO
 UPDATE_PAGE = "https://github.com/%s/releases/latest" % UPDATE_REPO
@@ -114,6 +115,7 @@ DEFAULT_CONFIG = {
     "username": "",           # 房间聊天显示名
     "rooms": {},              # community -> {"subnet": "...", "key": "...", "my_ip": "...", "last_host": 2}
     "update_check": {"last": 0, "skip": ""},   # 上次自动检查时间戳 / 用户选择跳过的版本
+    "star_prompted": False,   # 是否已经弹过「去 GitHub 点个 Star」提示
 }
 
 RE_ROOM_CODE = re.compile(r"^([A-Za-z0-9_-]{3,32})@(10\.\d{1,3}\.0)#([A-Za-z0-9]{6,16})$")
@@ -125,6 +127,13 @@ RE_SUBNET = re.compile(r"^10\.(\d{1,3})\.0$")
 # ----------------------------------------------------------------------------
 LANG_ZH = {
     "app_title": "n2n 房间管理小工具",
+    "star_win_title": "支持一下",
+    "star_head": "喜欢 %(app)s 吗？",
+    "star_body": "如果这个小工具帮你省了事，欢迎到 GitHub 仓库点个 Star。Star 多了，更新和修问题也更有动力。",
+    "star_repo": "仓库地址",
+    "star_go": "去点 Star",
+    "star_later": "以后再说",
+    "star_thanks": "谢谢支持！",
     "server_frame": "服务器（公网 supernode）",
     "server_fmt": "格式 IP:端口 或 IPv6 地址（如 2409:xxxx），IPv6 自动走转发器；多个用逗号分隔",
     "save": "保存",
@@ -312,6 +321,13 @@ LANG_ZH = {
 LANG_EN = {
     "app_title": "N2N Room Manager",
     "server_frame": "Server (public supernode)",
+    "star_win_title": "Support this project",
+    "star_head": "Enjoying %(app)s?",
+    "star_body": "If this little tool saved you some time, a Star on the GitHub repo means a lot — it keeps fixes and updates coming.",
+    "star_repo": "Repository",
+    "star_go": "Star on GitHub",
+    "star_later": "Maybe later",
+    "star_thanks": "Thanks for the support!",
     "server_fmt": "Format IP:port or an IPv6 address (e.g. 2409:xxxx); IPv6 uses local forwarder; comma separated",
     "save": "Save",
     "room_frame": "Room",
@@ -2096,6 +2112,10 @@ def format_code(code):
 class App:
     """面向普通用户的简单界面：两个按钮 + 一个状态，内部全自动。"""
 
+    # 求 Star 时打开的仓库地址（Pro 版覆盖为自己的仓库）
+    REPO_URL = "https://github.com/zgs7157/n2n-lan"
+    STAR_APP_NAME = "N2N LAN"
+
     STATE_COLORS = {
         "idle": "#9aa0a6",
         "preparing": "#0b64c4",
@@ -2157,6 +2177,7 @@ class App:
         self._latest_url = ""
         self._update_busy = False
         self._ver_btn = None
+        self._star_win = None
 
         global _lang
         _lang = self.cfg.get("lang") or detect_lang()
@@ -2171,6 +2192,74 @@ class App:
         self._tick()
         # 启动 4 秒后自动查一次新版本（距上次检查不足 24 小时则跳过）
         self.root.after(4000, self._maybe_auto_check)
+        # 错开两秒，首次启动时求个 Star
+        self.root.after(6000, self._maybe_star_prompt)
+
+    # ---------------- 首次启动：求个 Star ----------------
+    def _maybe_star_prompt(self):
+        """首次启动弹一次「去 GitHub 点 Star」，之后不再打扰。"""
+        try:
+            if self.cfg.get("star_prompted"):
+                return
+            if self._star_win is not None:
+                return
+            self._show_star_prompt()
+        except Exception:
+            pass
+
+    def _show_star_prompt(self):
+        win = tk.Toplevel(self.root)
+        self._star_win = win
+        win.title(tr("star_win_title"))
+        win.transient(self.root)
+        win.resizable(False, False)
+        inner = ttk.Frame(win, padding=(20, 18, 20, 16))
+        inner.pack(fill="both", expand=True)
+        ttk.Label(inner, text=tr("star_head", app=self.STAR_APP_NAME),
+                  font=("", 12, "bold")).pack(anchor="w")
+        ttk.Label(inner, text=tr("star_body"), wraplength=400, justify="left",
+                  foreground="#444444").pack(anchor="w", pady=(8, 0))
+        ttk.Label(inner, text="%s：%s" % (tr("star_repo"), self.REPO_URL),
+                  foreground="#0b64c4").pack(anchor="w", pady=(8, 0))
+        row = ttk.Frame(inner)
+        row.pack(fill="x", pady=(14, 0))
+        ttk.Button(row, text=tr("star_go"), command=self._star_open).pack(side="left")
+        ttk.Button(row, text=tr("star_later"), command=self._star_close).pack(side="right")
+        win.protocol("WM_DELETE_WINDOW", self._star_close)
+        win.bind("<Escape>", lambda e: self._star_close())
+        win.update_idletasks()
+        try:
+            w = max(win.winfo_reqwidth(), 470)
+            h = win.winfo_reqheight()
+            x = self.root.winfo_rootx() + max((self.root.winfo_width() - w) // 2, 0)
+            y = self.root.winfo_rooty() + 110
+            win.geometry("%dx%d+%d+%d" % (w, h, x, y))
+        except Exception:
+            pass
+        try:
+            win.lift()
+        except Exception:
+            pass
+
+    def _star_open(self):
+        try:
+            webbrowser.open(self.REPO_URL)
+        except Exception:
+            pass
+        self._star_close()
+
+    def _star_close(self):
+        try:
+            self.cfg["star_prompted"] = True
+            save_config(self.cfg)
+        except Exception:
+            pass
+        try:
+            if self._star_win is not None:
+                self._star_win.destroy()
+        except Exception:
+            pass
+        self._star_win = None
 
     # ---------------- 界面 ----------------
     def _build_ui(self):
