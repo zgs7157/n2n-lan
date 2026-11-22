@@ -94,17 +94,33 @@ bash deploy_supernode_docker.sh   # community image qida/n2n
 > in English automatically; you can switch it anytime in "Tools & Settings → Language".
 
 ### Room code format
+
+**8-character room code**, e.g. `J7N3-WD8Y`:
+
+- Drawn from a 32-character alphabet — `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (no `0/1/I/O`,
+  which are easy to mistype or mishear) — for 32^8 ≈ 1.1 trillion combinations;
+- The code deterministically derives every parameter via `sha256("n2n-lan|" + code)`:
+  community `room-j7n3-wd8y`, virtual subnet `10.x.0` (x comes from hash bytes 2–4, range 2–251),
+  and the transport key (first 16 hex chars of the hash);
+- The same code yields the same room on any machine, with no central server needed. Case and
+  the `-` separator are normalised automatically.
+
+**Invite code** = room code (+ optional server address):
+
 ```
-community@subnet#key      example: mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ
+J7N3-WD8Y@39.162.81.144:7654
 ```
-- `community` = n2n community name (room isolation; must match within a room)
-- `subnet` = first three octets of the virtual subnet (e.g. 10.88.0; all IPs in a room
-  must share the subnet)
-- `key` = transport encryption passphrase (n2n PSK; prevents eavesdropping / cross-room)
-- **Room password (optional)**: host ticks "Password" to get a 6-digit password; the final
-  key = `sha256(key:password)` first 16 hex chars. **Wrong password → different key →
-  cannot decrypt peer traffic → effectively cannot join**, even if the room code leaks.
-  No-password rooms use the room-code key directly.
+
+The part after `@` is the server; without it the built-in public nodes are used. "Copy invite code"
+in the host's window produces exactly this string — the friend pastes the whole thing.
+
+**Room password (optional)**: ticking "Password" generates a separate **6-digit** password to
+send privately. The final key = `sha256(room-code key:password)` first 16 hex chars, so
+**wrong password → different key → cannot decrypt peer traffic → cannot join**, even if the
+room code leaks. No-password rooms use the derived key directly.
+
+**Legacy long code** `community@subnet#key` (e.g. `mc-pixel-creeper-1234@10.88.0#Ab3CdEfGhJ`)
+still works — paste it into the Join box or pass it as the script's first argument.
 
 ### Linux client (when a friend uses Linux)
 
@@ -196,7 +212,7 @@ After creating/joining a room click **Room Chat** — **no extra server needed**
 
 ## 4. Security & Notes
 
-- **Encryption**: the key in the room code is the n2n PSK (AES). Don't share it with
+- **Encryption**: the key derived from the room code is the n2n PSK (AES). Don't share it with
   strangers; to keep other rooms out, just generate a new room code.
 - **Ports**: UDP only. Clients need no inbound ports (P2P hole punching); the server must
   open UDP 7654.
@@ -204,7 +220,7 @@ After creating/joining a room click **Room Chat** — **no extra server needed**
   AVs may flag driver installs — normal. Driver files were extracted from the Bugxia
   EasyN2N package (its own exe is an E-language program that may false-positive;
   **this tool does NOT include that exe** — only the official signed driver components).
-- **Limit**: one PC can join one room at a time; rooms have no hard cap (≤10 recommended).
+- **Limit**: one PC can join one room at a time; rooms have no hard cap (≤8 recommended).
 
 ---
 
@@ -226,7 +242,8 @@ the private IP** — you need one of:
 ### Option 2: Public supernode (backup when no public IP / router locked down)
 Use a community-maintained public n2n supernode (e.g. Bugxia/EasyN2N nodes bj/cd/sh/gz).
 **Everyone fills in the same public node address**:
-- Room isolation is still guaranteed by `room code = community@subnet#key`;
+- Room isolation is still guaranteed by the room code (community, virtual subnet and transport
+  key are all derived from that single string); the key is the transport passphrase;
 - Cost: traffic does not pass through your own server; relies on the node's uptime/latency.
 
 ### Option 3: Mobile friends join directly (no install; recommended for phones)
