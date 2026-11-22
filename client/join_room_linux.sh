@@ -10,13 +10,13 @@
 #
 # 示例:
 #   # 新格式（推荐）：邀请码自带服务器
-#   sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
+#   sudo bash join_room_linux.sh 'J7N3-WD8Y@203.0.113.10:7654'
 #   # 新格式：房间码和服务器分开给
-#   sudo bash join_room_linux.sh J7N3-WD8Y 39.162.81.144:7654
+#   sudo bash join_room_linux.sh J7N3-WD8Y 203.0.113.10:7654
 #   # 房主走 IPv6 兜底时，服务器是 IPv6 地址（脚本会自动起本地转发器）
-#   sudo bash join_room_linux.sh J7N3-WD8Y 2409:8a48:9d4:5ff0:add1:1ad8:fac2:3ba0
+#   sudo bash join_room_linux.sh J7N3-WD8Y 2001:db8::1
 #   # 旧格式长房间码（仍兼容，第四个参数是老的房间密码，可省略）
-#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 39.162.81.144:7654
+#   sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 203.0.113.10:7654
 #
 # 前置条件:
 #   - python3（脚本用它做密钥派生和虚拟 IP 领号；几乎每个发行版自带）
@@ -36,8 +36,8 @@ usage() {
     cat <<'EOF'
 用法: sudo bash join_room_linux.sh <房间码或邀请码> [服务器地址] [旧格式密码]
 
-  新格式: sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
-  旧格式: sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 39.162.81.144:7654
+  新格式: sudo bash join_room_linux.sh 'J7N3-WD8Y@203.0.113.10:7654'
+  旧格式: sudo bash join_room_linux.sh 'mc-pixel-1234@10.88.0#Ab3CdEfGhJ' 203.0.113.10:7654
 EOF
 }
 

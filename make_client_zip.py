@@ -13,8 +13,8 @@ CLIENT = os.path.join(ROOT, "client")
 OUT = os.path.join(ROOT, "n2n-lan-client.zip")
 PREFIX = "n2n-lan-client/"
 
-EXCLUDE_DIRS = {"logs", "__pycache__"}
-EXCLUDE_FILES = {"config.json"}
+EXCLUDE_DIRS = {"logs", "logs_pro", "audit_reports", "__pycache__"}
+EXCLUDE_FILES = {"config.json", "config_pro.json"}
 EXCLUDE_SUFFIXES = (".pyc",)
 EXCLUDE_NAMES = {"WinIPBroadcast.exe", "n2n_room_manager_old_noipv6.exe", "edge_lucktu_nov6.bak.exe"}
 

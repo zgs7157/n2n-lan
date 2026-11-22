@@ -108,7 +108,7 @@ bash deploy_supernode_docker.sh   # community image qida/n2n
 **Invite code** = room code (+ optional server address):
 
 ```
-J7N3-WD8Y@39.162.81.144:7654
+J7N3-WD8Y@203.0.113.10:7654
 ```
 
 The part after `@` is the server; without it the built-in public nodes are used. "Copy invite code"
@@ -142,9 +142,9 @@ use `client/join_room_linux.sh`:
 2. Download and run the script (just paste the invite code the client shows, same as a Windows friend):
    ```bash
    wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
-   sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
+   sudo bash join_room_linux.sh 'J7N3-WD8Y@203.0.113.10:7654'
    # or pass the server separately:
-   sudo bash join_room_linux.sh J7N3-WD8Y 39.162.81.144:7654
+   sudo bash join_room_linux.sh J7N3-WD8Y 203.0.113.10:7654
    ```
    (If raw.githubusercontent is unreachable, prefix the URL with `https://ghproxy.net/`.)
    Linux uses the **same derivation rules** as Windows: the 8-character room code is hashed with

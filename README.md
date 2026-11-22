@@ -91,7 +91,7 @@ bash deploy_supernode_docker.sh   # 使用社区镜像 qida/n2n
 **邀请码** = 房间码（可选再带服务器地址）：
 
 ```
-J7N3-WD8Y@39.162.81.144:7654
+J7N3-WD8Y@203.0.113.10:7654
 ```
 
 `@` 后面是服务器地址，不写就用内置公共节点。房主点「复制邀请码」拿到的就是这一段，好友整段粘贴即可。
@@ -120,9 +120,9 @@ J7N3-WD8Y@39.162.81.144:7654
 2. 下载脚本并执行（**直接粘客户端给出的邀请码**即可，与 Windows 好友用法完全一致）：
    ```bash
    wget https://raw.githubusercontent.com/zgs7157/n2n-lan/main/client/join_room_linux.sh
-   sudo bash join_room_linux.sh 'J7N3-WD8Y@39.162.81.144:7654'
+   sudo bash join_room_linux.sh 'J7N3-WD8Y@203.0.113.10:7654'
    # 房间码和服务器分开给也行：
-   sudo bash join_room_linux.sh J7N3-WD8Y 39.162.81.144:7654
+   sudo bash join_room_linux.sh J7N3-WD8Y 203.0.113.10:7654
    ```
    （raw.githubusercontent 直连不通时，给 wget 加 ghproxy 前缀：
    `https://ghproxy.net/https://raw.githubusercontent.com/...`）
