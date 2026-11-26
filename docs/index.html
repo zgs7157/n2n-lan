@@ -666,9 +666,10 @@
 <!-- 访问统计：填入 Cloudflare Web Analytics 的 token 后自动生效，留空则完全不加载 -->
 <script>
 (function(){
-  var CF_TOKEN = "";
+  var CF_TOKEN = "9b53cad0095b46e289840c5963dbe399";
   if (!CF_TOKEN) return;
   var s = document.createElement('script');
+  s.type = 'module';
   s.defer = true;
   s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
   s.setAttribute('data-cf-beacon', '{"token":"' + CF_TOKEN + '"}');
